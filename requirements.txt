@@ -1,0 +1,4 @@
+nltk==3.2.1
+numpy==1.12.1
+tensorflow_gpu==1.1.0
+tensorflow==1.1.0

@@ -1,0 +1,39 @@
+{
+    "batch_size": 32,
+    "d_len_range": [
+        0,
+        2000
+    ],
+    "data_root": "D:/source/data/RC-Cloze-CBT/CBTest/CBTest/data/",
+    "dataset": "cbt",
+    "debug": false,
+    "dropout_rate": 0.0,
+    "embedding_dim": 200,
+    "embedding_file": "D:/source/data/embedding/glove.6B/glove.6B.200d.txt",
+    "ensemble": false,
+    "evaluate_every_n": 400,
+    "grad_clipping": 10,
+    "hidden_size": 128,
+    "log_file": null,
+    "lr": 0.001,
+    "max_count": null,
+    "max_vocab_num": 100000,
+    "num_epoches": 10,
+    "num_layers": 1,
+    "optimizer": "ADAM",
+    "patience": 5,
+    "print_every_n": 10,
+    "q_len_range": [
+        0,
+        200
+    ],
+    "random_seed": 1007,
+    "test": true,
+    "test_file": "cbtest_NE_test_2500ex.txt",
+    "tmp_dir": "tmp",
+    "train": false,
+    "train_file": "cbtest_NE_train.txt",
+    "use_lstm": false,
+    "valid_file": "cbtest_NE_valid_2000ex.txt",
+    "weight_path": "weights/test-0.68"
+}
