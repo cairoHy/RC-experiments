@@ -157,17 +157,20 @@ class RcBase(NLPBase, metaclass=abc.ABCMeta):
 
     def validate(self):
         batch_size = self.args.batch_size
-        v_batch_num = self.valid_nums // batch_size + 1
+        v_batch_num = self.valid_nums // batch_size
+        # ensure the entire valid set is selected
+        v_batch_num = v_batch_num + 1 if (self.valid_nums % batch_size) == 0 else v_batch_num
         logger("Validate on {} batches, {} samples per batch, {} total."
                .format(v_batch_num, batch_size, self.valid_nums))
         val_num, val_corrects, v_loss = 0, 0, 0
         for i in range(v_batch_num):
             data, samples = self.dataset.get_next_batch("valid", i)
-            loss, v_correct = self.sess.run([self.loss, self.correct_prediction], feed_dict=data)
-            val_num += samples
-            val_corrects += v_correct
-            v_loss += loss * samples
-        # assert (val_num == self.valid_nums)
+            if samples != 0:
+                loss, v_correct = self.sess.run([self.loss, self.correct_prediction], feed_dict=data)
+                val_num += samples
+                val_corrects += v_correct
+                v_loss += loss * samples
+        assert (val_num == self.valid_nums)
         val_acc = val_corrects / val_num
         val_loss = v_loss / val_num
         logger("Evaluate on : {}/{}.\tVal acc : {:.4f}.\tVal Loss : {:.4f}".format(val_num,
@@ -209,12 +212,14 @@ class RcBase(NLPBase, metaclass=abc.ABCMeta):
             self.sess.run(tf.global_variables_initializer())
             self.load_weight()
         batch_size = self.args.batch_size
-        batch_num = self.test_num // batch_size + 1
+        batch_num = self.test_num // batch_size
+        batch_num = batch_num + 1 if (self.test_num % batch_size) == 0 else batch_num
         correct_num, total_num = 0, 0
         for i in range(batch_num):
             data, samples = self.dataset.get_next_batch("test", i)
-            correct, = self.sess.run([self.correct_prediction], feed_dict=data)
-            correct_num, total_num = correct_num + correct, total_num + samples
+            if samples != 0:
+                correct, = self.sess.run([self.correct_prediction], feed_dict=data)
+                correct_num, total_num = correct_num + correct, total_num + samples
         assert (total_num == self.test_num)
         logger("Test on : {}/{}".format(total_num, self.test_num))
         test_acc = correct_num / total_num
