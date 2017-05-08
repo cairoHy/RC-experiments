@@ -1,7 +1,7 @@
 import os
 
 import tensorflow as tf
-from tensorflow.contrib.rnn import GRUCell
+from tensorflow.contrib.rnn import GRUCell, MultiRNNCell, LSTMCell
 
 from models.nlp_base import logger
 from models.rc_base import RcBase
@@ -19,13 +19,25 @@ class AoAReader(RcBase):
 
     # noinspection PyAttributeOutsideInit
     def create_model(self):
+        #########################
+        # b ... position of the example within the batch
+        # t ... position of the word within the document/question
+        #       ... d for max length of document
+        #       ... q for max length of question
+        # f ... features of the embedding vector or the encoded feature vector
+        # i ... position of the word in candidates list
+        # v ... position of the word in vocabulary
+        #########################
+        num_layers = self.args.num_layers
         hidden_size = self.args.hidden_size
-        self.max_steps = self.d_len + self.q_len
-        logger(" [*] Building Bidirectional GRU layer...")
-        self.fw_cell = GRUCell(hidden_size)
-        self.bw_cell = GRUCell(hidden_size)
-        self.initial_state_fw = self.fw_cell.zero_state(self.args.batch_size, tf.float32)
-        self.initial_state_bw = self.bw_cell.zero_state(self.args.batch_size, tf.float32)
+        cell = LSTMCell if self.args.use_lstm else GRUCell
+
+        # model input
+        questions_bt = tf.placeholder(dtype=tf.int32, shape=(None, self.q_len), name="questions_bt")
+        documents_bt = tf.placeholder(dtype=tf.int32, shape=(None, self.d_len), name="documents_bt")
+        # noinspection PyUnusedLocal
+        candidates_bi = tf.placeholder(dtype=tf.int32, shape=(None, self.A_len), name="candidates_bi")
+        y_true_bi = tf.placeholder(shape=(None, self.A_len), dtype=tf.float32, name="y_true_bi")
 
         init_embedding = tf.constant(self.embedding_matrix, dtype=tf.float32, name="embedding_init")
         embedding = tf.get_variable(initializer=init_embedding,
@@ -34,51 +46,79 @@ class AoAReader(RcBase):
         if self.args.train and self.args.keep_prob < 1:
             embedding = tf.nn.dropout(embedding, self.args.keep_prob)
 
-        inputs = tf.placeholder(tf.int32, [self.args.batch_size, self.max_steps], name="inputs")
-        embed_inputs = tf.nn.embedding_lookup(embedding, inputs)
+        # shape=(None) the length of inputs
+        document_lengths = tf.reduce_sum(tf.sign(tf.abs(documents_bt)), 1)
+        question_lengths = tf.reduce_sum(tf.sign(tf.abs(questions_bt)), 1)
+        document_mask_bt = tf.sequence_mask(document_lengths, self.d_len, dtype=tf.float32)
+        question_mask_bt = tf.sequence_mask(question_lengths, self.q_len, dtype=tf.float32)
 
-        _seq_len = tf.fill(tf.expand_dims(self.args.batch_size, 0),
-                           tf.constant(self.max_steps, dtype=tf.int64))
+        with tf.variable_scope('q_encoder', initializer=tf.orthogonal_initializer()):
+            # encode question to fixed length of vector
+            # output shape: (None, max_q_length, embedding_dim)
+            question_embed_btf = tf.nn.embedding_lookup(embedding, questions_bt)
+            logger("q_embed_btf shape {}".format(question_embed_btf.get_shape()))
+            q_cell_fw = MultiRNNCell(cells=[cell(hidden_size) for _ in range(num_layers)])
+            q_cell_bw = MultiRNNCell(cells=[cell(hidden_size) for _ in range(num_layers)])
+            outputs, last_states = tf.nn.bidirectional_dynamic_rnn(cell_bw=q_cell_bw,
+                                                                   cell_fw=q_cell_fw,
+                                                                   dtype="float32",
+                                                                   sequence_length=question_lengths,
+                                                                   inputs=question_embed_btf,
+                                                                   swap_memory=True)
+            # q_encoder output shape: (None, max_t_length, hidden_size * 2)
+            q_encoded_bqf = tf.concat(outputs, axis=-1)
+            logger("q_encoded_bqf shape {}".format(q_encoded_bqf.get_shape()))
 
-        outputs, states = tf.nn.bidirectional_dynamic_rnn(
-            self.fw_cell,
-            self.bw_cell,
-            embed_inputs,
-            sequence_length=_seq_len,
-            initial_state_fw=self.initial_state_fw,
-            initial_state_bw=self.initial_state_bw,
-            dtype=tf.float32)
+        with tf.variable_scope('d_encoder', initializer=tf.orthogonal_initializer()):
+            # encode each document(context) word to fixed length vector
+            # output shape: (None, max_d_length, embedding_dim)
+            d_embed_btf = tf.nn.embedding_lookup(embedding, documents_bt)
+            logger("d_embed_btf shape {}".format(d_embed_btf.get_shape()))
+            d_cell_fw = MultiRNNCell(cells=[cell(hidden_size) for _ in range(num_layers)])
+            d_cell_bw = MultiRNNCell(cells=[cell(hidden_size) for _ in range(num_layers)])
+            outputs, last_states = tf.nn.bidirectional_dynamic_rnn(cell_bw=d_cell_bw,
+                                                                   cell_fw=d_cell_fw,
+                                                                   dtype="float32",
+                                                                   sequence_length=document_lengths,
+                                                                   inputs=d_embed_btf,
+                                                                   swap_memory=True)
+            # d_encoder output shape: (None, max_d_length, hidden_size * 2)
+            d_encoded_bdf = tf.concat(outputs, axis=-1)
+            logger("d_encoded_bdf shape {}".format(d_encoded_bdf.get_shape()))
 
-        # concat output
-        outputs = tf.concat(outputs, -1)
+        # mask of the pair-wise matrix
+        M_mask = tf.einsum("bi,bj->bij", document_mask_bt, question_mask_bt)
+        # batch pair-wise matching, shape = (batch_size, self.d_lens, self.q_lens)
+        M_bdq = tf.matmul(d_encoded_bdf, q_encoded_bqf, adjoint_b=True)
 
-        # select document & query
-        d = outputs[:, :self.d_len, :]
-        q = outputs[:, self.d_len:, :]
-
-        # batch pair-wise matching
-        i_att = tf.matmul(d, q, adjoint_b=True)  # shape = (batch_size, self.d, self.q)
         # individual attentions
-        alpha = tf.map_fn(lambda x: tf.nn.softmax(tf.transpose(x)), i_att)
-        # attention-over-attentions
-        beta_t = tf.map_fn(tf.nn.softmax, i_att)
-        beta = tf.map_fn(lambda x: tf.reduce_mean(x, 0), beta_t)  # shape = (batch_size, self.q, )
-        beta = tf.reshape(beta, [self.args.batch_size, self.q_len, 1])
-        # document-level attention
-        s = tf.matmul(alpha, beta, adjoint_a=True)  # shape = (batch_size, self.d, 1)
+        alpha_bdq = self.softmax_with_mask(M_bdq, 1, M_mask, name="alpha")
+        beta_bdq = self.softmax_with_mask(M_bdq, 2, M_mask, name="beta")
+        beta_bq1 = tf.expand_dims(tf.reduce_sum(beta_bdq, 1) / tf.to_float(tf.expand_dims(document_lengths, -1)), -1)
+        logger("beta_bq1 shape:{}".format(beta_bq1.get_shape()))
+        # document-level attention, shape = (batch_size, self.d_lens)
+        s_bd = tf.squeeze(tf.einsum("bdq,bqi->bdi", alpha_bdq, beta_bq1), -1)
 
-        document = inputs[:, :self.d_len]
+        vocab_size = self.embedding_matrix.shape[0]
+        # attention sum operation and gather within candidate_index
+        y_hat_bi = tf.scan(fn=lambda prev, cur: tf.gather(tf.unsorted_segment_sum(cur[0], cur[1], vocab_size), cur[2]),
+                           elems=[s_bd, documents_bt, candidates_bi],
+                           initializer=tf.Variable([0] * self.A_len, dtype="float32"))
 
-        mask = tf.map_fn(predict, vocab, dtype=tf.float32)
-        mask = tf.reshape(mask, [self.args.batch_size, self.vocab_size, self.d_len])
+        # loss and correct number
+        self.loss = tf.reduce_mean(
+            tf.nn.softmax_cross_entropy_with_logits(logits=y_hat_bi, labels=y_true_bi) +
+            self.args.l2 * embedding
+            , axis=-1)
 
-        # prediction
-        self.y_ = tf.reshape(tf.matmul(mask, s), [self.args.batch_size, self.vocab_size])
+        self.correct_prediction = tf.reduce_sum(
+            tf.sign(tf.cast(tf.equal(tf.argmax(y_hat_bi, 1), tf.argmax(y_true_bi, 1)), "float")))
 
-        # answer
-        self.y = tf.placeholder(tf.float32, [self.args.batch_size, self.vocab_size])
-
-        self.loss = tf.nn.softmax_cross_entropy_with_logits(logits=self.y_, labels=self.y)
-        tf.summary.scalar("loss", tf.reduce_mean(self.loss))
-
-        self.correct_prediction = tf.equal(tf.argmax(self.y, 1), tf.argmax(self.y_, 1))
+    @staticmethod
+    def softmax_with_mask(logits, axis, mask, epsilon=1e-12, name=None):
+        with tf.name_scope(name, 'softmax', [logits, mask]):
+            max_axis = tf.reduce_max(logits, axis, keep_dims=True)
+            target_exp = tf.exp(logits - max_axis) * mask
+            normalize = tf.reduce_sum(target_exp, axis, keep_dims=True)
+            softmax = target_exp / (normalize + epsilon)
+            return softmax

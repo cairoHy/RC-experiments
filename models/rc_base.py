@@ -43,18 +43,21 @@ class RcBase(NLPBase, metaclass=abc.ABCMeta):
         parser.add_argument("--dataset", default="cbt", choices=["cbt", "cnn", "dailymail"],
                             help='type of the dataset to load')
 
-        parser.add_argument("--d_len_range", default=(0, 2000), help="length scope of document to load")
+        parser.add_argument("--d_len_range", default=(0, 2000), type=list, help="length scope of document to load")
 
-        parser.add_argument("--q_len_range", default=(0, 200), help="length scope of question to load")
+        parser.add_argument("--q_len_range", default=(0, 200), type=list, help="length scope of question to load")
 
         # hyper-parameters
-        parser.add_argument("--lr", default=0.001, help="learning rate")
+        parser.add_argument("--l2", default=0.0001, type=float, help="l2 regularization weight")
 
-        parser.add_argument("--hidden_size", default=128, help="RNN hidden size")
+        parser.add_argument("--lr", default=0.001, type=float, help="learning rate")
 
-        parser.add_argument("--num_layers", default=1, help="RNN layer number")
+        parser.add_argument("--hidden_size", default=128, type=int, help="RNN hidden size")
 
-        parser.add_argument("--use_lstm", default=False, help="RNN kind, if False, use GRU else LSTM")
+        parser.add_argument("--num_layers", default=1, type=int, help="RNN layer number")
+
+        parser.add_argument("--use_lstm", default=False, type=self.str2bool,
+                            help="RNN kind, if False, use GRU else LSTM")
 
     def get_train_op(self):
         """
@@ -73,7 +76,7 @@ class RcBase(NLPBase, metaclass=abc.ABCMeta):
             (tf.clip_by_norm(grad, self.args.grad_clipping), var)
             if grad is not None else (grad, var)
             for grad, var in grad_vars]
-        self.train_op = optimizer.apply_gradients(grad_vars)
+        self.train_op = optimizer.apply_gradients(grad_vars, self.step)
         return
 
     @abc.abstractmethod
@@ -110,6 +113,7 @@ class RcBase(NLPBase, metaclass=abc.ABCMeta):
         """
         train model
         """
+        self.step = tf.Variable(0, name="global_step", trainable=False)
         batch_size = self.args.batch_size
         epochs = self.args.num_epoches
         self.get_train_op()
@@ -123,8 +127,10 @@ class RcBase(NLPBase, metaclass=abc.ABCMeta):
         batch_num = self.train_nums // batch_size
         logger("Train on {} batches, {} samples per batch, {} total.".format(batch_num, batch_size, self.train_nums))
 
-        for step in range(batch_num * epochs):
-            # on Epoch end
+        step = self.sess.run(self.step)
+        while step < batch_num * epochs:
+            step = self.sess.run(self.step)
+            # on Epoch start
             if step % batch_num == 0:
                 corrects_in_epoch, samples_in_epoch, loss_in_epoch = 0, 0, 0
                 logger("{}Epoch : {}{}".format("-" * 40, step // batch_num + 1, "-" * 40))
@@ -137,6 +143,7 @@ class RcBase(NLPBase, metaclass=abc.ABCMeta):
             loss_in_epoch += loss * samples
             samples_in_epoch += samples
 
+            # logger
             if step % self.args.print_every_n == 0:
                 logger("Samples : {}/{}.\tStep : {}/{}.\tLoss : {:.4f}.\tAccuracy : {:.4f}".format(
                     samples_in_epoch, self.train_nums,

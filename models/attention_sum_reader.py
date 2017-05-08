@@ -33,12 +33,12 @@ class AttentionSumReader(RcBase):
 
         # model input
         questions_bt = tf.placeholder(dtype=tf.int32, shape=(None, self.q_len), name="questions_bt")
-        context_bt = tf.placeholder(dtype=tf.int32, shape=(None, self.d_len), name="context_bt")
+        documents_bt = tf.placeholder(dtype=tf.int32, shape=(None, self.d_len), name="documents_bt")
         candidates_bi = tf.placeholder(dtype=tf.int32, shape=(None, self.A_len), name="candidates_bi")
         y_true_bi = tf.placeholder(shape=(None, self.A_len), dtype=tf.float32, name="y_true_bi")
 
         # shape=(None) the length of inputs
-        context_lengths = tf.reduce_sum(tf.sign(tf.abs(context_bt)), 1)
+        context_lengths = tf.reduce_sum(tf.sign(tf.abs(documents_bt)), 1)
         question_lengths = tf.reduce_sum(tf.sign(tf.abs(questions_bt)), 1)
         context_mask_bt = tf.sequence_mask(context_lengths, self.d_len, dtype=tf.float32)
 
@@ -67,7 +67,7 @@ class AttentionSumReader(RcBase):
         with tf.variable_scope('d_encoder', initializer=tf.orthogonal_initializer()):
             # encode each document(context) word to fixed length vector
             # output shape: (None, max_d_length, embedding_dim)
-            d_embed_btf = tf.nn.embedding_lookup(embedding, context_bt)
+            d_embed_btf = tf.nn.embedding_lookup(embedding, documents_bt)
             logger("d_embed_btf shape {}".format(d_embed_btf.get_shape()))
             d_cell_fw = MultiRNNCell(cells=[cell(hidden_size) for _ in range(num_layers)])
             d_cell_bw = MultiRNNCell(cells=[cell(hidden_size) for _ in range(num_layers)])
@@ -116,7 +116,7 @@ class AttentionSumReader(RcBase):
             return result
 
         # output shape: (None, i) i = max_candidate_length = 10
-        y_hat = sum_probs_batch(candidates_bi, context_bt, mem_attention_bt)
+        y_hat = sum_probs_batch(candidates_bi, documents_bt, mem_attention_bt)
 
         # crossentropy
         output = y_hat / tf.reduce_sum(y_hat,
@@ -125,8 +125,7 @@ class AttentionSumReader(RcBase):
         # manual computation of crossentropy
         epsilon = tf.convert_to_tensor(_EPSILON, output.dtype.base_dtype, name="epsilon")
         output = tf.clip_by_value(output, epsilon, 1. - epsilon)
-        self.loss = tf.reduce_mean(- tf.reduce_sum(y_true_bi * tf.log(output),
-                                                   reduction_indices=len(output.get_shape()) - 1))
+        self.loss = tf.reduce_mean(- tf.reduce_sum(y_true_bi * tf.log(output), axis=-1))
 
         # correct prediction nums
         self.correct_prediction = tf.reduce_sum(tf.sign(tf.cast(tf.equal(tf.argmax(y_hat, 1),

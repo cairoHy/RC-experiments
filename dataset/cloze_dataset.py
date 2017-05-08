@@ -6,6 +6,7 @@ import nltk
 import numpy as np
 from tensorflow.contrib.keras.python.keras.preprocessing.sequence import pad_sequences
 from tensorflow.python.platform import gfile
+
 from models.nlp_base import logger
 
 
@@ -16,7 +17,7 @@ def default_tokenizer(sentence):
     return nltk.word_tokenize(sentence.lower())
 
 
-# noinspection PyUnresolvedReferences
+# noinspection PyAttributeOutsideInit
 class ClozeDataset(object):
     def __init__(self, args):
         self.args = args
@@ -36,6 +37,38 @@ class ClozeDataset(object):
 
         self._BLANK = "XXXXX"
 
+    @property
+    def train_idx(self):
+        return self._train_idx
+
+    @train_idx.setter
+    def train_idx(self, value):
+        self._train_idx = value
+
+    @property
+    def train_sample_num(self):
+        return self._train_sample_num
+
+    @train_sample_num.setter
+    def train_sample_num(self, value):
+        self._train_sample_num = value
+
+    @property
+    def valid_sample_num(self):
+        return self._valid_sample_num
+
+    @valid_sample_num.setter
+    def valid_sample_num(self, value):
+        self._valid_sample_num = value
+
+    @property
+    def test_sample_num(self):
+        return self._test_sample_num
+
+    @test_sample_num.setter
+    def test_sample_num(self, value):
+        self._test_sample_num = value
+
     def shuffle(self):
         logger("Shuffle the dataset.")
         np.random.shuffle(self.train_idx)
@@ -54,13 +87,17 @@ class ClozeDataset(object):
         else:
             dataset = self.test_data
             sample_num = self.test_sample_num
-        start = idx * batch_size
-        stop = (idx + 1) * batch_size if start < sample_num and (idx + 1) * batch_size < sample_num else -1
+        if mode == "train":
+            start = self.train_idx[idx] * batch_size
+            stop = (self.train_idx[idx] + 1) * batch_size
+        else:
+            start = idx * batch_size
+            stop = (idx + 1) * batch_size if start < sample_num and (idx + 1) * batch_size < sample_num else -1
         samples = batch_size if stop != -1 else len(dataset[0]) - start
         _slice = np.index_exp[start:stop]
         data = {
             "questions_bt:0": dataset[0][_slice],
-            "context_bt:0": dataset[1][_slice],
+            "documents_bt:0": dataset[1][_slice],
             "candidates_bi:0": dataset[2][_slice],
             "y_true_bi:0": dataset[3][_slice]
         }
@@ -78,7 +115,7 @@ class ClozeDataset(object):
         :return: 词向量矩阵。
         """
         num_words = max(word_dict.values()) + 1
-        embedding_matrix = init(-0.1, 0.1, (num_words, embed_dim))
+        embedding_matrix = init(-0.05, 0.05, (num_words, embed_dim))
         logger('Embeddings: %d x %d' % (num_words, embed_dim))
 
         if not in_file:
@@ -175,6 +212,7 @@ class ClozeDataset(object):
         if self.args.test:
             self.test_data = self.preprocess_input_sequences(self.test_data)
 
+    # noinspection PyUnresolvedReferences
     def preprocess_input_sequences(self, data):
         """
         预处理输入：

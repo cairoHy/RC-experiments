@@ -43,22 +43,37 @@ class NLPBase(object):
     def add_args(self, parser):
         pass
 
+    @staticmethod
+    def str2bool(v):
+        if v.lower() in ("yes", "true", "t", "y", "1"):
+            return True
+        if v.lower() in ("no", "false", "f", "n", "0"):
+            return False
+        else:
+            raise argparse.ArgumentTypeError('Boolean value expected.')
+
+    @staticmethod
+    def str_or_none(v):
+        if v.lower() in ("no", "false", "f", "n", "0"):
+            return None
+        return v
+
     def get_args(self):
         # TODO:Get args according to args.json
         parser = argparse.ArgumentParser()
         # basis argument
-        parser.add_argument("--debug", default=False, help="is debug mode on or off")
+        parser.add_argument("--debug", default=False, type=self.str2bool, help="is debug mode on or off")
 
-        parser.add_argument("--train", default=True, help="train or not")
+        parser.add_argument("--train", default=True, type=self.str2bool, help="train or not")
 
-        parser.add_argument("--test", default=False, help="test or not")
+        parser.add_argument("--test", default=False, type=self.str2bool, help="test or not")
 
         # TODO:Implement ensemble test
-        parser.add_argument("--ensemble", default=False, help="ensemble test or not")
+        parser.add_argument("--ensemble", default=False, type=self.str2bool, help="ensemble test or not")
 
-        parser.add_argument("--random_seed", default=2088, help="random seed")
+        parser.add_argument("--random_seed", default=2088, type=int, help="random seed")
 
-        parser.add_argument("--log_file", default=None, help="which file to save the log,if None,use screen")
+        parser.add_argument("--log_file", default=None, type=str, help="which file to save the log,if None,use screen")
 
         parser.add_argument("--weight_path", default="weights", help="path to save all trained models")
 
@@ -75,31 +90,31 @@ class NLPBase(object):
         parser.add_argument("--test_file", default="cbtest_NE_test_2500ex.txt", help="test file")
 
         parser.add_argument("--embedding_file", default="D:/source/data/embedding/glove.6B/glove.6B.200d.txt",
-                            type=str, help="pre-trained embedding file")
+                            type=self.str_or_none, help="pre-trained embedding file")
 
-        parser.add_argument("--max_vocab_num", default=100000, help="the max number of words in vocabulary")
+        parser.add_argument("--max_vocab_num", default=100000, type=int, help="the max number of words in vocabulary")
 
         # hyper-parameters
-        parser.add_argument("--embedding_dim", default=200, help="dimension of word embeddings")
+        parser.add_argument("--embedding_dim", default=200, type=int, help="dimension of word embeddings")
 
-        parser.add_argument("--batch_size", default=32, help="batch_size")
+        parser.add_argument("--batch_size", default=32, type=int, help="batch_size")
 
-        parser.add_argument("--keep_prob", default=0.5, help="dropout,percentage to keep during training")
+        parser.add_argument("--keep_prob", default=0.9, type=float, help="dropout,percentage to keep during training")
 
-        parser.add_argument("--grad_clipping", default=10, help="the threshold value of gradient clip")
+        parser.add_argument("--grad_clipping", default=10, type=int, help="the threshold value of gradient clip")
 
         # train specific
         parser.add_argument("--optimizer", default="ADAM", choices=["SGD", "ADAM"],
                             help="optimize algorithms, SGD or Adam")
 
-        parser.add_argument("--print_every_n", default=10, help="print performance every n steps")
+        parser.add_argument("--print_every_n", default=10, type=int, help="print performance every n steps")
 
-        parser.add_argument("--evaluate_every_n", default=400,
+        parser.add_argument("--evaluate_every_n", default=400, type=int,
                             help="evaluate performance on validation set and possibly saving the best model")
 
-        parser.add_argument("--num_epoches", default=10, help="max epoch iterations")
+        parser.add_argument("--num_epoches", default=10, type=int, help="max epoch iterations")
 
-        parser.add_argument("--patience", default=5, help="early stopping patience")
+        parser.add_argument("--patience", default=5, type=int, help="early stopping patience")
         # -----------------------------------------------------------------------------------------------------------
 
         self.add_args(parser)

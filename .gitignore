@@ -125,7 +125,6 @@ crashlytics-build.properties
 fabric.properties
 logs/
 .idea/
-test.ipynb
 
 ### Tensorflow checkpoint
 checkpoint

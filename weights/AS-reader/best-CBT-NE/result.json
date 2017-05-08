@@ -1,4 +1,4 @@
 {
     "model": "attention_sum_reader.py",
-    "test_acc": 0.672
+    "test_acc": 0.6896
 }
