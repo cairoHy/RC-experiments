@@ -122,7 +122,7 @@ class NLPBase(object):
         args = parser.parse_args()
 
         # set debug params
-        args.max_count = 22 * 32 * 10 + 22 * 22 if args.debug else None
+        args.max_count = 22 * 32 * 10 + 22 * 16 if args.debug else None
         args.evaluate_every_n = 5 if args.debug else args.evaluate_every_n
         args.num_epoches = 2 if args.debug else args.num_epoches
 
