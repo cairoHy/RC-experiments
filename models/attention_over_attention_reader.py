@@ -88,7 +88,7 @@ class AoAReader(RcBase):
 
         # mask of the pair-wise matrix
         M_mask = tf.einsum("bi,bj->bij", document_mask_bt, question_mask_bt)
-        # batch pair-wise matching, shape = (batch_size, self.d_lens, self.q_lens)
+        # batch pair-wise matching
         M_bdq = tf.matmul(d_encoded_bdf, q_encoded_bqf, adjoint_b=True)
 
         # individual attentions
@@ -96,7 +96,7 @@ class AoAReader(RcBase):
         beta_bdq = self.softmax_with_mask(M_bdq, 2, M_mask, name="beta")
         beta_bq1 = tf.expand_dims(tf.reduce_sum(beta_bdq, 1) / tf.to_float(tf.expand_dims(document_lengths, -1)), -1)
         logger("beta_bq1 shape:{}".format(beta_bq1.get_shape()))
-        # document-level attention, shape = (batch_size, self.d_lens)
+        # document-level attention
         s_bd = tf.squeeze(tf.einsum("bdq,bqi->bdi", alpha_bdq, beta_bq1), -1)
 
         vocab_size = self.embedding_matrix.shape[0]
@@ -108,8 +108,7 @@ class AoAReader(RcBase):
         # loss and correct number
         self.loss = tf.reduce_mean(
             tf.nn.softmax_cross_entropy_with_logits(logits=y_hat_bi, labels=y_true_bi) +
-            self.args.l2 * embedding
-            , axis=-1)
+            self.args.l2 * tf.nn.l2_loss(embedding), axis=-1)
 
         self.correct_prediction = tf.reduce_sum(
             tf.sign(tf.cast(tf.equal(tf.argmax(y_hat_bi, 1), tf.argmax(y_true_bi, 1)), "float")))

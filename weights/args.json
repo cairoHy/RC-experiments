@@ -1,5 +1,5 @@
 {
-    "batch_size": 32,
+    "batch_size": 16,
     "d_len_range": [
         0,
         2000
