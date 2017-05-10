@@ -38,27 +38,6 @@ class RcBase(NLPBase, metaclass=abc.ABCMeta):
     def correct_prediction(self, value):
         self._correct_prediction = value
 
-    def add_args(self, parser):
-        # data specific
-        parser.add_argument("--dataset", default="cbt", choices=["cbt", "cnn", "dailymail"],
-                            help='type of the dataset to load')
-
-        parser.add_argument("--d_len_range", default=(0, 2000), type=list, help="length scope of document to load")
-
-        parser.add_argument("--q_len_range", default=(0, 200), type=list, help="length scope of question to load")
-
-        # hyper-parameters
-        parser.add_argument("--l2", default=0.0001, type=float, help="l2 regularization weight")
-
-        parser.add_argument("--lr", default=0.001, type=float, help="learning rate")
-
-        parser.add_argument("--hidden_size", default=128, type=int, help="RNN hidden size")
-
-        parser.add_argument("--num_layers", default=1, type=int, help="RNN layer number")
-
-        parser.add_argument("--use_lstm", default=False, type=self.str2bool,
-                            help="RNN kind, if False, use GRU else LSTM")
-
     def get_train_op(self):
         """
         define optimization operation 

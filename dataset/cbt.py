@@ -74,17 +74,11 @@ class CBT(ClozeDataset):
 
         return vocab_file, idx_train_file, idx_valid_file, idx_test_file
 
-    def read_cbt_data(self, file, d_len_range=None, q_len_range=None, max_count=None):
+    def read_cbt_data(self, file, max_count=None):
         """
         read CBT data in id format.
         :return: (documents,questions,answers,candidates) each elements is a numpy array.
         """
-
-        def ok(d_len, q_len):
-            a_con = (not d_len_range) or (d_len_range[0] < d_len < d_len_range[1])
-            b_con = (not q_len_range) or q_len_range[0] < q_len < q_len_range[1]
-            return a_con and b_con
-
         documents, questions, answers, candidates = [], [], [], []
         with FastGFile(file, mode="r") as f:
             counter = 0
@@ -103,11 +97,10 @@ class CBT(ClozeDataset):
                     A.remove(tmp[1])
                     A.insert(0, tmp[1])  # put right answer in the first of candidate
                 elif counter % 22 == 0:
-                    if ok(len(d), len(q)):
-                        documents.append(d)
-                        questions.append(q)
-                        answers.append(a)
-                        candidates.append(A)
+                    documents.append(d)
+                    questions.append(q)
+                    answers.append(a)
+                    candidates.append(A)
                     d, q, a, A = [], [], [], []
                 else:
                     d.extend(line.strip().split(" ") + [self.EOS_ID])  # add EOS ID in the end of each sentence
@@ -132,14 +125,8 @@ class CBT(ClozeDataset):
             output_dir=self.args.tmp_dir)
 
         # read data
-        self.train_data = self.read_cbt_data(idx_train_file,
-                                             self.args.d_len_range,
-                                             self.args.q_len_range,
-                                             max_count=self.args.max_count)
-        self.valid_data = self.read_cbt_data(idx_valid_file,
-                                             self.args.d_len_range,
-                                             self.args.q_len_range,
-                                             max_count=self.args.max_count)
+        self.train_data = self.read_cbt_data(idx_train_file, max_count=self.args.max_count)
+        self.valid_data = self.read_cbt_data(idx_valid_file, max_count=self.args.max_count)
 
         def get_max_length(d_bt):
             lens = [len(i) for i in d_bt]

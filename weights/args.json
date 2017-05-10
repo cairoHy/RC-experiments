@@ -1,19 +1,16 @@
 {
+    "args_file": null,
     "batch_size": 16,
-    "d_len_range": [
-        0,
-        2000
-    ],
     "data_root": "D:/source/data/RC-Cloze-CBT/CBTest/CBTest/data/",
     "dataset": "cbt",
     "debug": false,
     "embedding_dim": 384,
     "embedding_file": null,
     "ensemble": false,
-    "evaluate_every_n": 400,
+    "evaluate_every_n": 1000,
     "grad_clipping": 10,
     "hidden_size": 384,
-    "keep_prob": 0.9,
+    "keep_prob": 0.5,
     "l2": 0.0001,
     "log_file": null,
     "lr": 0.001,
@@ -24,10 +21,6 @@
     "optimizer": "ADAM",
     "patience": 5,
     "print_every_n": 10,
-    "q_len_range": [
-        0,
-        200
-    ],
     "random_seed": 2088,
     "test": false,
     "test_file": "cbtest_NE_test_2500ex.txt",

@@ -1,5 +1,5 @@
 {
-    "args_file": "weights\\AS-reader\\best-CBT-NE\\args.json",
+    "args_file": "weights\\AoA-reader\\best-CBT-NE\\args.json",
     "batch_size": 32,
     "data_root": "D:/source/data/RC-Cloze-CBT/CBTest/CBTest/data/",
     "dataset": "cbt",
@@ -10,7 +10,7 @@
     "evaluate_every_n": 400,
     "grad_clipping": 10,
     "hidden_size": 128,
-    "keep_prob": 0.5,
+    "keep_prob": 1.0,
     "l2": 0.0001,
     "log_file": null,
     "lr": 0.001,
@@ -29,5 +29,5 @@
     "train_file": "cbtest_NE_train.txt",
     "use_lstm": false,
     "valid_file": "cbtest_NE_valid_2000ex.txt",
-    "weight_path": "weights\\AS-reader\\best-CBT-NE\\"
+    "weight_path": "weights/AoA-reader/best-CBT-NE"
 }
