@@ -38,27 +38,6 @@ class RcBase(NLPBase, metaclass=abc.ABCMeta):
     def correct_prediction(self, value):
         self._correct_prediction = value
 
-    def add_args(self, parser):
-        # data specific
-        parser.add_argument("--dataset", default="cbt", choices=["cbt", "cnn", "dailymail"],
-                            help='type of the dataset to load')
-
-        parser.add_argument("--d_len_range", default=(0, 2000), type=list, help="length scope of document to load")
-
-        parser.add_argument("--q_len_range", default=(0, 200), type=list, help="length scope of question to load")
-
-        # hyper-parameters
-        parser.add_argument("--l2", default=0.0001, type=float, help="l2 regularization weight")
-
-        parser.add_argument("--lr", default=0.001, type=float, help="learning rate")
-
-        parser.add_argument("--hidden_size", default=128, type=int, help="RNN hidden size")
-
-        parser.add_argument("--num_layers", default=1, type=int, help="RNN layer number")
-
-        parser.add_argument("--use_lstm", default=False, type=self.str2bool,
-                            help="RNN kind, if False, use GRU else LSTM")
-
     def get_train_op(self):
         """
         define optimization operation 
@@ -109,6 +88,13 @@ class RcBase(NLPBase, metaclass=abc.ABCMeta):
         if self.args.test:
             self.test()
 
+    def get_batch_data(self, mode, idx):
+        """
+        Get batch data and feed it to tensorflow graph
+        modify it in sub-class if needed
+        """
+        return self.dataset.get_next_batch(mode, idx)
+
     def train(self):
         """
         train model
@@ -136,7 +122,7 @@ class RcBase(NLPBase, metaclass=abc.ABCMeta):
                 logger("{}Epoch : {}{}".format("-" * 40, step // batch_num + 1, "-" * 40))
                 self.dataset.shuffle()
 
-            data, samples = self.dataset.get_next_batch("train", step % batch_num)
+            data, samples = self.get_batch_data("train", step % batch_num)
             loss, _, corrects_in_batch = self.sess.run([self.loss, self.train_op, self.correct_prediction],
                                                        feed_dict=data)
             corrects_in_epoch += corrects_in_batch
@@ -164,7 +150,7 @@ class RcBase(NLPBase, metaclass=abc.ABCMeta):
                .format(v_batch_num, batch_size, self.valid_nums))
         val_num, val_corrects, v_loss = 0, 0, 0
         for i in range(v_batch_num):
-            data, samples = self.dataset.get_next_batch("valid", i)
+            data, samples = self.get_batch_data("valid", i)
             if samples != 0:
                 loss, v_correct = self.sess.run([self.loss, self.correct_prediction], feed_dict=data)
                 val_num += samples
@@ -216,7 +202,7 @@ class RcBase(NLPBase, metaclass=abc.ABCMeta):
         batch_num = batch_num + 1 if (self.test_num % batch_size) != 0 else batch_num
         correct_num, total_num = 0, 0
         for i in range(batch_num):
-            data, samples = self.dataset.get_next_batch("test", i)
+            data, samples = self.get_batch_data("test", i)
             if samples != 0:
                 correct, = self.sess.run([self.correct_prediction], feed_dict=data)
                 correct_num, total_num = correct_num + correct, total_num + samples

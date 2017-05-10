@@ -119,9 +119,7 @@ class AttentionSumReader(RcBase):
         y_hat = sum_probs_batch(candidates_bi, documents_bt, mem_attention_bt)
 
         # crossentropy
-        output = y_hat / tf.reduce_sum(y_hat,
-                                       reduction_indices=len(y_hat.get_shape()) - 1,
-                                       keep_dims=True)
+        output = y_hat / tf.reduce_sum(y_hat, axis=-1, keep_dims=True)
         # manual computation of crossentropy
         epsilon = tf.convert_to_tensor(_EPSILON, output.dtype.base_dtype, name="epsilon")
         output = tf.clip_by_value(output, epsilon, 1. - epsilon)

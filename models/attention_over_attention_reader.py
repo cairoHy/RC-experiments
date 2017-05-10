@@ -28,6 +28,7 @@ class AoAReader(RcBase):
         # i ... position of the word in candidates list
         # v ... position of the word in vocabulary
         #########################
+        _EPSILON = 10e-8
         num_layers = self.args.num_layers
         hidden_size = self.args.hidden_size
         cell = LSTMCell if self.args.use_lstm else GRUCell
@@ -35,16 +36,15 @@ class AoAReader(RcBase):
         # model input
         questions_bt = tf.placeholder(dtype=tf.int32, shape=(None, self.q_len), name="questions_bt")
         documents_bt = tf.placeholder(dtype=tf.int32, shape=(None, self.d_len), name="documents_bt")
-        # noinspection PyUnusedLocal
         candidates_bi = tf.placeholder(dtype=tf.int32, shape=(None, self.A_len), name="candidates_bi")
         y_true_bi = tf.placeholder(shape=(None, self.A_len), dtype=tf.float32, name="y_true_bi")
+        keep_prob = tf.placeholder(dtype=tf.float32, name="keep_prob")
 
         init_embedding = tf.constant(self.embedding_matrix, dtype=tf.float32, name="embedding_init")
         embedding = tf.get_variable(initializer=init_embedding,
                                     name="embedding_matrix",
                                     dtype=tf.float32)
-        if self.args.train and self.args.keep_prob < 1:
-            embedding = tf.nn.dropout(embedding, self.args.keep_prob)
+        embedding = tf.nn.dropout(embedding, keep_prob)
 
         # shape=(None) the length of inputs
         document_lengths = tf.reduce_sum(tf.sign(tf.abs(documents_bt)), 1)
@@ -105,19 +105,30 @@ class AoAReader(RcBase):
                            elems=[s_bd, documents_bt, candidates_bi],
                            initializer=tf.Variable([0] * self.A_len, dtype="float32"))
 
-        # loss and correct number
-        self.loss = tf.reduce_mean(
-            tf.nn.softmax_cross_entropy_with_logits(logits=y_hat_bi, labels=y_true_bi) +
-            self.args.l2 * tf.nn.l2_loss(embedding), axis=-1)
+        # manual computation of crossentropy
+        output_bi = y_hat_bi / tf.reduce_sum(y_hat_bi, axis=-1, keep_dims=True)
+        epsilon = tf.convert_to_tensor(_EPSILON, output_bi.dtype.base_dtype, name="epsilon")
+        output_bi = tf.clip_by_value(output_bi, epsilon, 1. - epsilon)
 
+        # loss and correct number
+        self.loss = tf.reduce_mean(- tf.reduce_sum(y_true_bi * tf.log(output_bi), axis=-1))
         self.correct_prediction = tf.reduce_sum(
-            tf.sign(tf.cast(tf.equal(tf.argmax(y_hat_bi, 1), tf.argmax(y_true_bi, 1)), "float")))
+            tf.sign(tf.cast(tf.equal(tf.argmax(output_bi, 1),
+                                     tf.argmax(y_true_bi, 1)), "float")))
 
     @staticmethod
-    def softmax_with_mask(logits, axis, mask, epsilon=1e-12, name=None):
+    def softmax_with_mask(logits, axis, mask, epsilon=10e-8, name=None):
         with tf.name_scope(name, 'softmax', [logits, mask]):
             max_axis = tf.reduce_max(logits, axis, keep_dims=True)
             target_exp = tf.exp(logits - max_axis) * mask
             normalize = tf.reduce_sum(target_exp, axis, keep_dims=True)
             softmax = target_exp / (normalize + epsilon)
             return softmax
+
+    def get_batch_data(self, mode, idx):
+        data = self.dataset.get_next_batch(mode, idx)
+        if mode == "train":
+            data.update({"keep_prob:0": self.args.keep_prob})
+        else:
+            data.update({"keep_prob:0": 1.0})
+        return data
