@@ -1,15 +1,15 @@
 {
-    "args_file": null,
-    "batch_size": 16,
+  "args_file": "weights\\args.json",
+  "batch_size": 32,
     "data_root": "D:/source/data/RC-Cloze-CBT/CBTest/CBTest/data/",
     "dataset": "cbt",
     "debug": false,
-    "embedding_dim": 384,
-    "embedding_file": null,
+  "embedding_dim": 300,
+  "embedding_file": "D:\\source\\data\\embedding\\glove.6B\\glove.6B.300d.txt",
     "ensemble": false,
-    "evaluate_every_n": 1000,
+  "evaluate_every_n": 400,
     "grad_clipping": 10,
-    "hidden_size": 384,
+  "hidden_size": 128,
     "keep_prob": 0.5,
     "l2": 0.0001,
     "log_file": null,
@@ -29,5 +29,5 @@
     "train_file": "cbtest_NE_train.txt",
     "use_lstm": false,
     "valid_file": "cbtest_NE_valid_2000ex.txt",
-    "weight_path": "weights"
+  "weight_path": "weights\\"
 }

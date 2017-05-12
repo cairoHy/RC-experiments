@@ -36,12 +36,29 @@ python -m nltk.downloader punkt
 
 #### 3.Train the model
 
-You can now train the model by entering the following command.
+First, modify the parameters in the args.json.
+
+You can now train and test the model by entering the following commands. The params in [] should be determined by the real situation.
+
+- Train:
 
 ```shell
-python main.py --train 1 --test 0 --data_dir [data_path] --train_file [**.txt] --valid_file [**.txt]
+python main.py [module.model_class] --args_file [args.json] --train 1 --test 0 
+```
+
+- Test:
+
+```python
+python main.py [module.model_class] --args_file [args.json] --train 0 --test 1 
 ```
 
 #### 4. Result of the model
 
 All the trained results and corresponding config params are saved in sub directories of weight_path(by default the `weight` folder) named `args.json` and `result.json`.
+
+The best results of implemented models are listed below:
+
+|            | CBT-NE | CBT-CN |
+| ---------- | ------ | ------ |
+| AS-Reader  | 0.6988 |        |
+| AoA-Reader | 0.7088 |        |

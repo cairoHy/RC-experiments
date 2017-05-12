@@ -126,9 +126,9 @@ class AoAReader(RcBase):
             return softmax
 
     def get_batch_data(self, mode, idx):
-        data = self.dataset.get_next_batch(mode, idx)
+        data, samples = self.dataset.get_next_batch(mode, idx)
         if mode == "train":
             data.update({"keep_prob:0": self.args.keep_prob})
         else:
             data.update({"keep_prob:0": 1.0})
-        return data
+        return data, samples
