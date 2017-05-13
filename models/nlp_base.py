@@ -59,6 +59,12 @@ class NLPBase(object):
             return None
         return v
 
+    @staticmethod
+    def int_or_none(v):
+        if not v or v.lower() in ("no", "false", "f", "n", "0", "none", "null"):
+            return None
+        return int(v)
+
     def get_args(self):
         """
         The priority of args:
@@ -104,7 +110,7 @@ class NLPBase(object):
         parser.add_argument("--embedding_file", default="D:/source/data/embedding/glove.6B/glove.6B.200d.txt",
                             type=self.str_or_none, help="pre-trained embedding file")
 
-        parser.add_argument("--max_count", default=None, type=self.str_or_none,
+        parser.add_argument("--max_count", default=None, type=self.int_or_none,
                             help="read n lines of data file, if None, read all data")
 
         parser.add_argument("--max_vocab_num", default=100000, type=int, help="the max number of words in vocabulary")
@@ -152,7 +158,7 @@ class NLPBase(object):
         args = parser.parse_args()
 
         # set debug params
-        args.max_count = 22 * 32 * 10 + 22 * 16 if args.debug else None
+        args.max_count = 22 * 32 * 10 + 22 * 16 if args.debug else args.max_count
         args.evaluate_every_n = 5 if args.debug else args.evaluate_every_n
         args.num_epoches = 2 if args.debug else args.num_epoches
 

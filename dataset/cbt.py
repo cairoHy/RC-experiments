@@ -27,9 +27,9 @@ class CBT(ClozeDataset):
         word_dict = self.load_vocab(vocab_file)
         counter = 0
 
-        with gfile.FastGFile(data_file, mode="rb") as data_file:
-            with gfile.FastGFile(target_file, mode="w") as tokens_file:
-                for line in data_file:
+        with gfile.FastGFile(data_file) as f:
+            with gfile.FastGFile(target_file, mode="wb") as tokens_file:
+                for line in f:
                     counter += 1
                     if counter % 100000 == 0:
                         logger("Tokenizing line %d" % counter)
@@ -62,15 +62,15 @@ class CBT(ClozeDataset):
         vocab_file = os.path.join(data_dir, output_dir, "vocab.%d" % max_vocab_num)
 
         if not gfile.Exists(vocab_file):
-            word_counter = self.gen_vocab(os_train_file)
-            word_counter = self.gen_vocab(os_valid_file, old_counter=word_counter)
-            word_counter = self.gen_vocab(os_test_file, old_counter=word_counter)
+            word_counter = self.gen_vocab(os_train_file, max_count=self.args.max_count)
+            word_counter = self.gen_vocab(os_valid_file, old_counter=word_counter, max_count=self.args.max_count)
+            word_counter = self.gen_vocab(os_test_file, old_counter=word_counter, max_count=self.args.max_count)
             self.save_vocab(word_counter, vocab_file, max_vocab_num)
 
         # translate train/valid/test files to id format
-        self.cbt_data_to_token_ids(os_train_file, idx_train_file, vocab_file)
-        self.cbt_data_to_token_ids(os_valid_file, idx_valid_file, vocab_file)
-        self.cbt_data_to_token_ids(os_test_file, idx_test_file, vocab_file)
+        self.cbt_data_to_token_ids(os_train_file, idx_train_file, vocab_file, max_count=self.args.max_count)
+        self.cbt_data_to_token_ids(os_valid_file, idx_valid_file, vocab_file, max_count=self.args.max_count)
+        self.cbt_data_to_token_ids(os_test_file, idx_test_file, vocab_file, max_count=self.args.max_count)
 
         return vocab_file, idx_train_file, idx_valid_file, idx_test_file
 

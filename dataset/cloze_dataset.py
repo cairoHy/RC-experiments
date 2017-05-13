@@ -106,13 +106,7 @@ class ClozeDataset(object):
     @staticmethod
     def gen_embeddings(word_dict, embed_dim, in_file=None, init=np.zeros):
         """
-        为词表建立一个初始化的词向量矩阵，如果某个词不在词向量文件中，会随机初始化一个向量。
-
-        :param word_dict: 词到id的映射。
-        :param embed_dim: 词向量的维度。
-        :param in_file: 预训练的词向量文件。 
-        :param init: 对于预训练文件中找不到的词，如何初始化。
-        :return: 词向量矩阵。
+        Init embedding matrix with (or without) pre-trained word embeddings.
         """
         num_words = max(word_dict.values()) + 1
         embedding_matrix = init(-0.05, 0.05, (num_words, embed_dim))
@@ -138,16 +132,14 @@ class ClozeDataset(object):
 
     def sentence_to_token_ids(self, sentence, word_dict, tokenizer=default_tokenizer):
         """
-        把句子中的单词转化为相应的ID。
-        比如：
-            句子：["I", "have", "a", "dog"]
-            word_list：{"I": 1, "have": 2, "a": 4, "dog": 7"}
-            返回：[1, 2, 4, 7]
+        Turn sentence to token ids.
+            sentence:       ["I", "have", "a", "dog"]
+            word_list:      {"I": 1, "have": 2, "a": 4, "dog": 7"}
+            return:         [1, 2, 4, 7]
         """
         return [word_dict.get(token, self.UNK_ID) for token in tokenizer(sentence)]
 
     def get_embedding_matrix(self, vocab_file):
-        # 初始化词向量矩阵，使用(-0.1,0.1)区间内的随机均匀分布
         word_dict = self.load_vocab(vocab_file)
         embedding_matrix = self.gen_embeddings(word_dict,
                                                self.args.embedding_dim,
@@ -162,7 +154,7 @@ class ClozeDataset(object):
     @staticmethod
     def gen_vocab(data_file, tokenizer=default_tokenizer, old_counter=None, max_count=None):
         """
-        分析语料库，根据词频返回词典。
+        generate vocabulary according to train corpus.
         """
         logger("Creating word_dict from data %s" % data_file)
         word_counter = old_counter if old_counter else Counter()
@@ -215,10 +207,7 @@ class ClozeDataset(object):
     # noinspection PyUnresolvedReferences
     def preprocess_input_sequences(self, data):
         """
-        预处理输入：
-        shuffle
-        PAD/TRUNC到固定长度的序列
-        y_true是长度为self.A_len的向量，index=0为正确答案，one-hot编码
+        preprocess,pad to fixed length.
         """
         documents, questions, answer, candidates = data
 
