@@ -1,11 +1,11 @@
 {
-    "args_file": "weights\\AS-reader\\best-CBT-NE\\args.json",
+  "args_file": "weights/AS-reader/best-CBT-NE/args.json",
     "batch_size": 32,
-    "data_root": "D:/source/data/RC-Cloze-CBT/CBTest/CBTest/data/",
+  "data_root": "data/CBTest/CBTest/data/",
     "dataset": "cbt",
     "debug": false,
     "embedding_dim": 200,
-    "embedding_file": "D:/source/data/embedding/glove.6B/glove.6B.200d.txt",
+  "embedding_file": "data/glove.6B/glove.6B.200d.txt",
     "ensemble": false,
     "evaluate_every_n": 400,
     "grad_clipping": 10,
@@ -29,5 +29,5 @@
     "train_file": "cbtest_NE_train.txt",
     "use_lstm": false,
     "valid_file": "cbtest_NE_valid_2000ex.txt",
-    "weight_path": "weights\\AS-reader\\best-CBT-NE\\"
+  "weight_path": "weights/AS-reader/best-CBT-NE"
 }
