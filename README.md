@@ -61,4 +61,4 @@ The best results of implemented models are listed below:
 |            | CBT-NE | CBT-CN |
 | ---------- | ------ | ------ |
 | AS-Reader  | 0.6988 |        |
-| AoA-Reader | 0.7088 |        |
+| AoA-Reader | 0.7100 |        |
