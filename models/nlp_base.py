@@ -96,7 +96,7 @@ class NLPBase(object):
         parser.add_argument("--dataset", default="cbt", choices=["cbt", "cnn", "dailymail"], type=str,
                             help='type of the dataset to load')
 
-        parser.add_argument("--data_root", default="D:/source/data/RC-Cloze-CBT/CBTest/CBTest/data/",
+        parser.add_argument("--data_root", default="data/CBTest/CBTest/data/",
                             help="root path of the dataset")
 
         parser.add_argument("--tmp_dir", default="tmp", help="dataset specific tmp folder")
@@ -107,7 +107,7 @@ class NLPBase(object):
 
         parser.add_argument("--test_file", default="cbtest_NE_test_2500ex.txt", help="test file")
 
-        parser.add_argument("--embedding_file", default="D:/source/data/embedding/glove.6B/glove.6B.200d.txt",
+        parser.add_argument("--embedding_file", default="data/glove.6B/glove.6B.200d.txt",
                             type=self.str_or_none, help="pre-trained embedding file")
 
         parser.add_argument("--max_count", default=None, type=self.int_or_none,

@@ -62,7 +62,7 @@ python main.py [module.model_class] --args_file [args.json] --train 0 --test 1
 
 All the trained results and corresponding config params are saved in sub directories of weight_path(by default the `weight` folder) named `args.json` and `result.json`.
 
-The best results of implemented models are listed below:
+The best results(with little hyper-parameter tune) of implemented models are listed below:
 
 |            | CBT-NE | CBT-CN |
 | ---------- | ------ | ------ |
