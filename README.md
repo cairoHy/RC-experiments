@@ -1,25 +1,41 @@
 # Reading Comprehension Experiments
 
-## About This Repo
+## About
 
 This is the tensorflow version implementation/reproduce of some reading comprehension models in some reading comprehension datasets including the following:
 
 Models:
 
 - Attention Sum Reader model as presented in "Text Comprehension with the Attention Sum Reader Network" (ACL2016) available at [http://arxiv.org/abs/1603.01547](http://arxiv.org/abs/1603.01547). 
+
+![](http://7xpqrs.com1.z0.glb.clouddn.com/FjmgZjrmBJ5w8WdDU2v9BMRj21r8)
+
 - Attention over Attention Reader model as presented in "Attention-over-Attention Neural Networks for Reading Comprehension" (arXiv2016.7) available at https://arxiv.org/abs/1607.04423.
+
+![](http://7xpqrs.com1.z0.glb.clouddn.com/FupB-rvxCvGvPTwa8UC4u3QUgqKI)
 
 Datasets:
 
-- CBT.http://lanl.arxiv.org/pdf/1506.03340.pdf
+- CBT, Children’s Book Test.http://lanl.arxiv.org/pdf/1506.03340.pdf
 
-## Quick Start
+## Start To Use
 
-#### 1.Getting data
+#### 1.Clone the code
 
-- Download the dataset used in this repo.
+```shell
+git clone https://github.com/zhanghaoyu1993/RC-experiments.git
+```
 
-#### 2.Environment Preparation
+#### 2.Get needed data
+
+- Download and extract the dataset used in this repo.
+
+```shell
+cd data
+./prepare-all.sh
+```
+
+#### 3.Environment Preparation
 
 - Python-64bit >= v3.5.
 - Install require libraries using the following command.
@@ -40,7 +56,7 @@ pip install tensorflow-gpu --upgrade
 python -m nltk.downloader punkt
 ```
 
-#### 3.Train the model
+#### 4.Train the model
 
 First, modify the parameters in the args.json.
 
@@ -52,19 +68,28 @@ You can now train and test the model by entering the following commands. The par
 python main.py [module.model_class] --args_file [args.json] --train 1 --test 0 
 ```
 
+After train, the parameters are stored in `weight_path/args.json`  and the model checkpoints are stored in `weight_path`.
+
 - Test:
 
 ```shell
 python main.py [module.model_class] --args_file [args.json] --train 0 --test 1 
 ```
 
-#### 4. Result of the model
+After test, the performance of model are stored in `weight_path/result.json`.
+
+#### 5.model performance
 
 All the trained results and corresponding config params are saved in sub directories of weight_path(by default the `weight` folder) named `args.json` and `result.json`.
 
-The best results(with little hyper-parameter tune) of implemented models are listed below:
+You should know that the implementation of some models are **slightly different** from the original, but the basic ideas are same, so the results are for reference only.
 
-|            | CBT-NE | CBT-CN |
-| ---------- | ------ | ------ |
-| AS-Reader  | 0.6988 |        |
-| AoA-Reader | 0.7100 |        |
+The best results of implemented models are listed below:
+
+- best result **we achieve**(with little hyper-parameter tune in single model) 
+- best result listed in original paper(in the brackets)
+
+|            | CBT-NE      | CBT-CN      |
+| ---------- | ----------- | ----------- |
+| AS-Reader  | 69.88(68.6) | 65.0(63.4)  |
+| AoA-Reader | 71.0(72.0)  | 68.12(69.4) |
