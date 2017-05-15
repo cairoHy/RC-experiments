@@ -1,4 +1,4 @@
 {
     "model": "attention_over_attention_reader.py",
-    "test_acc": 0.71
+    "test_acc": 0.6812
 }

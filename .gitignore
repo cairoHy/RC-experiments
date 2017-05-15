@@ -131,3 +131,5 @@ checkpoint
 *.meta
 *.index
 *.data-00000-of-00001
+data/CBTest/
+data/glove.6B/
