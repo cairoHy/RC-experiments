@@ -68,6 +68,12 @@ You can now train and test the model by entering the following commands. The par
 python main.py [module.model_class] --args_file [args.json] --train 1 --test 0 
 ```
 
+For example, if you want to train the AoA-Reader model, the command is similar to the following:
+
+```shell
+python main.py attention_over_attention.AoAReader --train 1 --test 0
+```
+
 After train, the parameters are stored in `weight_path/args.json`  and the model checkpoints are stored in `weight_path`.
 
 - Test:
@@ -93,3 +99,13 @@ The best results of implemented models are listed below:
 | ---------- | ----------- | ----------- |
 | AS-Reader  | 69.88(68.6) | 65.0(63.4)  |
 | AoA-Reader | 71.0(72.0)  | 68.12(69.4) |
+
+#### 6.FAQ
+
+- How do I use args_file argument in the shell?
+
+Once you enter a command in the shell(maybe a long one), the config will be stored in weight_path/args.json where weight_path is defined by another argument, after the command execute you can use --args.json to simplify the following command:
+```shell
+python main.py [module.model_class] --args_file [args.json]
+```
+And the priorities of arguments typed in the command line is higher than those stored in args.json, so you can change some arguments.
