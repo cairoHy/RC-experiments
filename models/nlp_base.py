@@ -8,17 +8,18 @@ from pprint import pprint
 import numpy as np
 import tensorflow as tf
 
-logger = logging.info
-
 
 class NLPBase(object):
     """
-    Base class for training models.
+    Base class for NLP experiments based on tensorflow environment.
+    Only do some arguments reading and serializing work.
     """
 
     def __init__(self):
         self.sess = tf.Session()
+        # get arguments
         self.args = self.get_args()
+        # log set
         logging.basicConfig(filename=self.args.log_file,
                             level=logging.DEBUG,
                             format='%(asctime)s %(message)s', datefmt='%y-%m-%d %H:%M')
@@ -27,10 +28,13 @@ class NLPBase(object):
         np.random.seed(self.args.random_seed)
         tf.set_random_seed(self.args.random_seed)
 
+        # save arguments
         self.save_args()
 
     def save_args(self):
-        # save all params
+        """
+        save all arguments.
+        """
         self.save_obj_to_json(vars(self.args), "args.json")
         pprint(vars(self.args), indent=4)
 
@@ -44,27 +48,6 @@ class NLPBase(object):
     def add_args(self, parser):
         pass
 
-    @staticmethod
-    def str2bool(v):
-        if v.lower() in ("yes", "true", "t", "y", "1"):
-            return True
-        if v.lower() in ("no", "false", "f", "n", "0", "none"):
-            return False
-        else:
-            raise argparse.ArgumentTypeError('Boolean value expected.')
-
-    @staticmethod
-    def str_or_none(v):
-        if not v or v.lower() in ("no", "false", "f", "n", "0", "none", "null"):
-            return None
-        return v
-
-    @staticmethod
-    def int_or_none(v):
-        if not v or v.lower() in ("no", "false", "f", "n", "0", "none", "null"):
-            return None
-        return int(v)
-
     def get_args(self):
         """
         The priority of args:
@@ -72,28 +55,50 @@ class NLPBase(object):
         [middle]    ...    args define in args_file
         [high]      ...    args define in command line
         """
+
+        def str2bool(v):
+            if v.lower() in ("yes", "true", "t", "y", "1"):
+                return True
+            if v.lower() in ("no", "false", "f", "n", "0", "none"):
+                return False
+            else:
+                raise argparse.ArgumentTypeError('Boolean value expected.')
+
+        def str_or_none(v):
+            if not v or v.lower() in ("no", "false", "f", "n", "0", "none", "null"):
+                return None
+            return v
+
+        def int_or_none(v):
+            if not v or v.lower() in ("no", "false", "f", "n", "0", "none", "null"):
+                return None
+            return int(v)
+
         # TODO:Implement ensemble test
         parser = argparse.ArgumentParser()
+        # -----------------------------------------------------------------------------------------------------------
         # basis argument
-        parser.add_argument("--debug", default=False, type=self.str2bool, help="is debug mode on or off")
+        parser.add_argument("--debug", default=False, type=str2bool, help="is debug mode on or off")
 
-        parser.add_argument("--train", default=True, type=self.str2bool, help="train or not")
+        parser.add_argument("--train", default=True, type=str2bool, help="train or not")
 
-        parser.add_argument("--test", default=False, type=self.str2bool, help="test or not")
+        parser.add_argument("--test", default=False, type=str2bool, help="test or not")
 
-        parser.add_argument("--ensemble", default=False, type=self.str2bool, help="ensemble test or not")
+        parser.add_argument("--ensemble", default=False, type=str2bool, help="ensemble test or not")
 
         parser.add_argument("--random_seed", default=2088, type=int, help="random seed")
 
-        parser.add_argument("--log_file", default=None, type=self.str_or_none,
+        parser.add_argument("--log_file", default=None, type=str_or_none,
                             help="which file to save the log,if None,use screen")
 
         parser.add_argument("--weight_path", default="weights", help="path to save all trained models")
 
-        parser.add_argument("--args_file", default=None, type=self.str_or_none, help="json file of current args")
+        parser.add_argument("--args_file", default=None, type=str_or_none, help="json file of current args")
 
         # data specific argument
-        parser.add_argument("--dataset", default="cbt", choices=["cbt", "cnn", "dailymail"], type=str,
+        # noinspection PyUnresolvedReferences
+        import dataset
+        parser.add_argument("--dataset", default="CBT", choices=sys.modules['dataset'].__all__, type=str,
                             help='type of the dataset to load')
 
         parser.add_argument("--data_root", default="data/CBTest/CBTest/data/",
@@ -108,14 +113,19 @@ class NLPBase(object):
         parser.add_argument("--test_file", default="cbtest_NE_test_2500ex.txt", help="test file")
 
         parser.add_argument("--embedding_file", default="data/glove.6B/glove.6B.200d.txt",
-                            type=self.str_or_none, help="pre-trained embedding file")
+                            type=str_or_none, help="pre-trained embedding file")
 
-        parser.add_argument("--max_count", default=None, type=self.int_or_none,
+        parser.add_argument("--max_count", default=None, type=int_or_none,
                             help="read n lines of data file, if None, read all data")
 
         parser.add_argument("--max_vocab_num", default=100000, type=int, help="the max number of words in vocabulary")
 
         # hyper-parameters
+        parser.add_argument("--use_char_embedding", default=False, type=str2bool,
+                            help="use character embedding or not")
+
+        parser.add_argument("--char_embedding_dim", default=100, type=int, help="dimension of char embeddings")
+
         parser.add_argument("--embedding_dim", default=200, type=int, help="dimension of word embeddings")
 
         parser.add_argument("--hidden_size", default=128, type=int, help="RNN hidden size")
@@ -130,7 +140,7 @@ class NLPBase(object):
 
         parser.add_argument("--num_layers", default=1, type=int, help="RNN layer number")
 
-        parser.add_argument("--use_lstm", default=False, type=self.str2bool,
+        parser.add_argument("--use_lstm", default=False, type=str2bool,
                             help="RNN kind, if False, use GRU else LSTM")
 
         # train specific

@@ -65,13 +65,13 @@ You can now train and test the model by entering the following commands. The par
 - Train:
 
 ```shell
-python main.py [module.model_class] --args_file [args.json] --train 1 --test 0 
+python main.py [model_class] --args_file [args.json] --train 1 --test 0 
 ```
 
 For example, if you want to train the AoA-Reader model, the command is similar to the following:
 
 ```shell
-python main.py attention_over_attention.AoAReader --train 1 --test 0
+python main.py AoAReader --train 1 --test 0
 ```
 
 After train, the parameters are stored in `weight_path/args.json`  and the model checkpoints are stored in `weight_path`.
@@ -79,7 +79,7 @@ After train, the parameters are stored in `weight_path/args.json`  and the model
 - Test:
 
 ```shell
-python main.py [module.model_class] --args_file [args.json] --train 0 --test 1 
+python main.py [model_class] --args_file [args.json] --train 0 --test 1 
 ```
 
 After test, the performance of model are stored in `weight_path/result.json`.
@@ -106,6 +106,6 @@ The best results of implemented models are listed below:
 
 Once you enter a command in the shell(maybe a long one), the config will be stored in weight_path/args.json where weight_path is defined by another argument, after the command execute you can use --args.json to simplify the following command:
 ```shell
-python main.py [module.model_class] --args_file [args.json]
+python main.py [model_class] --args_file [args.json]
 ```
 And the priorities of arguments typed in the command line is higher than those stored in args.json, so you can change some arguments.

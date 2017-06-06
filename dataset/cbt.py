@@ -2,14 +2,15 @@ import os
 from functools import reduce
 
 import numpy as np
+from tensorflow.contrib.keras.python.keras.preprocessing.sequence import pad_sequences
 from tensorflow.python.platform import gfile
 from tensorflow.python.platform.gfile import FastGFile
 
-from dataset.cloze_dataset import ClozeDataset
-from models.nlp_base import logger
+from dataset.rc_dataset import RCDataset
+from utils.log import logger
 
 
-class CBT(ClozeDataset):
+class CBT(RCDataset):
     def __init__(self, args):
         self.A_len = 10
         super().__init__(args)
@@ -47,7 +48,7 @@ class CBT(ClozeDataset):
                         token_ids = token_ids[1:] if token_ids else token_ids
                         tokens_file.write(" ".join([str(tok) for tok in token_ids]) + "\n")
 
-    def prepare_cbt_data(self, data_dir, train_file, valid_file, test_file, max_vocab_num, output_dir=""):
+    def prepare_data(self, data_dir, train_file, valid_file, test_file, max_vocab_num, output_dir=""):
         """
         build vocabulary and translate CBT data to id format.
         """
@@ -116,10 +117,23 @@ class CBT(ClozeDataset):
 
         return documents, questions, answers, candidates
 
+    def preprocess_input_sequences(self, data):
+        """
+        preprocess,pad to fixed length.
+        """
+        documents, questions, answer, candidates = data
+
+        questions_ok = pad_sequences(questions, maxlen=self.q_len, dtype="int32", padding="post", truncating="post")
+        documents_ok = pad_sequences(documents, maxlen=self.d_len, dtype="int32", padding="post", truncating="post")
+        candidates_ok = pad_sequences(candidates, maxlen=self.A_len, dtype="int32", padding="post", truncating="post")
+        y_true = np.zeros_like(candidates_ok)
+        y_true[:, 0] = 1
+        return questions_ok, documents_ok, candidates_ok, y_true
+
     # noinspection PyAttributeOutsideInit
     def get_data_stream(self):
         # prepare data
-        vocab_file, idx_train_file, idx_valid_file, idx_test_file = self.prepare_cbt_data(
+        self.vocab_file, idx_train_file, idx_valid_file, idx_test_file = self.prepare_data(
             self.args.data_root, self.args.train_file, self.args.valid_file,
             self.args.test_file, self.args.max_vocab_num,
             output_dir=self.args.tmp_dir)
@@ -144,4 +158,4 @@ class CBT(ClozeDataset):
             self.test_data = self.read_cbt_data(idx_test_file, max_count=self.args.max_count)
             self.test_sample_num = len(self.test_data[0])
 
-        return vocab_file, self.d_len, self.q_len, self.train_sample_num, self.valid_sample_num, self.test_sample_num
+        return self.d_len, self.q_len, self.train_sample_num, self.valid_sample_num, self.test_sample_num

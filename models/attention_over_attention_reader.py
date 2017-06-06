@@ -3,8 +3,8 @@ import os
 import tensorflow as tf
 from tensorflow.contrib.rnn import GRUCell, MultiRNNCell, LSTMCell
 
-from models.nlp_base import logger
 from models.rc_base import RcBase
+from utils.log import logger
 
 
 class AoAReader(RcBase):
@@ -36,8 +36,8 @@ class AoAReader(RcBase):
         # model input
         questions_bt = tf.placeholder(dtype=tf.int32, shape=(None, self.q_len), name="questions_bt")
         documents_bt = tf.placeholder(dtype=tf.int32, shape=(None, self.d_len), name="documents_bt")
-        candidates_bi = tf.placeholder(dtype=tf.int32, shape=(None, self.A_len), name="candidates_bi")
-        y_true_bi = tf.placeholder(shape=(None, self.A_len), dtype=tf.float32, name="y_true_bi")
+        candidates_bi = tf.placeholder(dtype=tf.int32, shape=(None, self.dataset.A_len), name="candidates_bi")
+        y_true_bi = tf.placeholder(shape=(None, self.dataset.A_len), dtype=tf.float32, name="y_true_bi")
         keep_prob = tf.placeholder(dtype=tf.float32, name="keep_prob")
 
         init_embedding = tf.constant(self.embedding_matrix, dtype=tf.float32, name="embedding_init")
@@ -103,7 +103,7 @@ class AoAReader(RcBase):
         # attention sum operation and gather within candidate_index
         y_hat_bi = tf.scan(fn=lambda prev, cur: tf.gather(tf.unsorted_segment_sum(cur[0], cur[1], vocab_size), cur[2]),
                            elems=[s_bd, documents_bt, candidates_bi],
-                           initializer=tf.Variable([0] * self.A_len, dtype="float32"))
+                           initializer=tf.Variable([0] * self.dataset.A_len, dtype="float32"))
 
         # manual computation of crossentropy
         output_bi = y_hat_bi / tf.reduce_sum(y_hat_bi, axis=-1, keep_dims=True)

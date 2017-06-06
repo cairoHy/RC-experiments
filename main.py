@@ -1,13 +1,16 @@
-import importlib
 import os
 import sys
 
 
 def get_model_class():
-    module_name, class_name = sys.argv[1].split(".")
-    importlib.import_module("models")
-    class_obj = getattr(importlib.import_module("." + module_name, "models"), class_name)
-    sys.argv.pop(1)
+    class_obj, class_name = None, sys.argv[1]
+    try:
+        import models
+        class_obj = getattr(sys.modules["models"], class_name)
+        sys.argv.pop(1)
+    except:
+        print("Model [{}] not found.\nSupported models:\n\n\t\t{}\n".format(class_name, sys.modules["models"].__all__))
+        exit(1)
     return class_obj()
 
 

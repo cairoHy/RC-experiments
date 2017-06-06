@@ -3,8 +3,8 @@ import os
 import tensorflow as tf
 from tensorflow.contrib.rnn import LSTMCell, MultiRNNCell, GRUCell
 
-from models.nlp_base import logger
 from models.rc_base import RcBase
+from utils.log import logger
 
 _EPSILON = 10e-8
 
@@ -34,8 +34,8 @@ class AttentionSumReader(RcBase):
         # model input
         questions_bt = tf.placeholder(dtype=tf.int32, shape=(None, self.q_len), name="questions_bt")
         documents_bt = tf.placeholder(dtype=tf.int32, shape=(None, self.d_len), name="documents_bt")
-        candidates_bi = tf.placeholder(dtype=tf.int32, shape=(None, self.A_len), name="candidates_bi")
-        y_true_bi = tf.placeholder(shape=(None, self.A_len), dtype=tf.float32, name="y_true_bi")
+        candidates_bi = tf.placeholder(dtype=tf.int32, shape=(None, self.dataset.A_len), name="candidates_bi")
+        y_true_bi = tf.placeholder(shape=(None, self.dataset.A_len), dtype=tf.float32, name="y_true_bi")
 
         # shape=(None) the length of inputs
         context_lengths = tf.reduce_sum(tf.sign(tf.abs(documents_bt)), 1)
@@ -112,7 +112,7 @@ class AttentionSumReader(RcBase):
             result = tf.scan(
                 fn=sum_probs_single_sentence,
                 elems=[candidate_indices_bi, sentence_ixs_bt, sentence_attention_probs_bt],
-                initializer=tf.Variable([0] * self.A_len, dtype="float32"))
+                initializer=tf.Variable([0] * self.dataset.A_len, dtype="float32"))
             return result
 
         # output shape: (None, i) i = max_candidate_length = 10

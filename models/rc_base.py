@@ -1,17 +1,22 @@
 import abc
 import os
+import sys
 
 import tensorflow as tf
 
-from dataset.cbt import CBT
+# noinspection PyUnresolvedReferences
+import dataset
 from models.nlp_base import NLPBase
-from models.nlp_base import logger
+from utils.log import logger
 
 
 # noinspection PyAttributeOutsideInit
 class RcBase(NLPBase, metaclass=abc.ABCMeta):
     """
-    Base class that reads different reading comprehension datasets, creates a model and starts training it.
+    Base class of reading comprehension experiments.
+    Reads different reading comprehension datasets according to specific class.
+    creates a model and starts training it.
+    Any deep learning model should inherit from this class and implement the create_model method.
     """
 
     @property
@@ -70,14 +75,19 @@ class RcBase(NLPBase, metaclass=abc.ABCMeta):
         """
         main method to train and test
         """
-        self.A_len = 10
-        self.dataset = CBT(self.args)
+        self.dataset = getattr(sys.modules["dataset"], self.args.dataset)(self.args)
 
+        # Get the statistics of data
+        # [document length] and [question length] to build the model
+        # train/valid/test sample number to train and validate and test the model
         statistics = self.dataset.get_data_stream()
-        vocab_file, self.d_len, self.q_len, self.train_nums, self.valid_nums, self.test_num = statistics
+        self.d_len, self.q_len, self.train_nums, self.valid_nums, self.test_num = statistics
         self.dataset.preprocess()
 
-        self.embedding_matrix = self.dataset.get_embedding_matrix(vocab_file)
+        # Get the word embedding and character embedding(if necessary)
+        self.embedding_matrix = self.dataset.get_embedding_matrix(self.dataset.vocab_file)
+        if self.args.use_char_embedding and getattr(self.dataset, "char_vocab_file"):
+            self.char_embedding_matrix = self.dataset.get_embedding_matrix(self.dataset.char_vocab_file, True)
 
         self.create_model()
 
@@ -88,10 +98,12 @@ class RcBase(NLPBase, metaclass=abc.ABCMeta):
         if self.args.test:
             self.test()
 
+        self.sess.close()
+
     def get_batch_data(self, mode, idx):
         """
         Get batch data and feed it to tensorflow graph
-        modify it in sub-class if needed
+        Modify it in sub-class if needed.
         """
         return self.dataset.get_next_batch(mode, idx)
 

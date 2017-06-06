@@ -133,3 +133,5 @@ checkpoint
 *.data-00000-of-00001
 data/CBTest/
 data/glove.6B/
+data/SQuAD/
+weights/args\.json

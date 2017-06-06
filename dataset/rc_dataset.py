@@ -1,13 +1,13 @@
+import abc
 import codecs
 import re
 from collections import Counter
 
 import nltk
 import numpy as np
-from tensorflow.contrib.keras.python.keras.preprocessing.sequence import pad_sequences
 from tensorflow.python.platform import gfile
 
-from models.nlp_base import logger
+from utils.log import logger
 
 
 def default_tokenizer(sentence):
@@ -18,7 +18,7 @@ def default_tokenizer(sentence):
 
 
 # noinspection PyAttributeOutsideInit
-class ClozeDataset(object):
+class RCDataset(object, metaclass=abc.ABCMeta):
     def __init__(self, args):
         self.args = args
         # padding,start of sentence,end of sentence,unk,end of question
@@ -28,7 +28,6 @@ class ClozeDataset(object):
         self._UNK = "_UNK"
         self._EOQ = "_EOQ"
         self._START_VOCAB = [self._PAD, self._BOS, self._EOS, self._UNK, self._EOQ]
-
         self.PAD_ID = 0
         self.BOS_ID = 1
         self.EOS_ID = 2
@@ -36,6 +35,13 @@ class ClozeDataset(object):
         self.EOQ_ID = 4
 
         self._BLANK = "XXXXX"
+
+        # special character of char embedding: pad and unk
+        self._CHAR_PAD = "γ"
+        self._CHAR_UNK = "δ"
+        self.CHAR_PAD_ID = 0
+        self.CHAR_UNK_ID = 1
+        self._CHAR_START_VOCAB = [self._CHAR_PAD,self._CHAR_UNK]
 
     @property
     def train_idx(self):
@@ -75,7 +81,7 @@ class ClozeDataset(object):
 
     def get_next_batch(self, mode, idx):
         """
-        return next batch of cloze data samples 
+        return next batch of data samples
         """
         batch_size = self.args.batch_size
         if mode == "train":
@@ -139,11 +145,18 @@ class ClozeDataset(object):
         """
         return [word_dict.get(token, self.UNK_ID) for token in tokenizer(sentence)]
 
-    def get_embedding_matrix(self, vocab_file):
+    def get_embedding_matrix(self, vocab_file, is_char_embedding=False):
+        """
+        :param is_char_embedding: is the function called for generate char embedding
+        :param vocab_file: file containing saved vocabulary.
+        :return: a dict with each key as a word, each value as its corresponding embedding vector.
+        """
         word_dict = self.load_vocab(vocab_file)
+        embedding_file = None if is_char_embedding else self.args.embedding_file
+        embedding_dim = self.args.char_embedding_dim if is_char_embedding else self.args.embedding_dim
         embedding_matrix = self.gen_embeddings(word_dict,
-                                               self.args.embedding_dim,
-                                               self.args.embedding_file,
+                                               embedding_dim,
+                                               embedding_file,
                                                init=np.random.uniform)
         return embedding_matrix
 
@@ -152,11 +165,32 @@ class ClozeDataset(object):
         pass
 
     @staticmethod
+    def gen_char_vocab(data_file, tokenizer=default_tokenizer, old_counter=None):
+        """
+         generate character level vocabulary according to train corpus.
+        """
+        logger("Creating character dict from data {}.".format(data_file))
+        char_counter = old_counter if old_counter else Counter()
+        with gfile.FastGFile(data_file) as f:
+            for line in f:
+                tokens = tokenizer(line.rstrip("\n"))
+                char_counter.update([char for word in tokens for char in word])
+
+        # summary statistics
+        total_chars = sum(char_counter.values())
+        distinct_chars = len(list(char_counter))
+
+        logger("STATISTICS" + "-" * 20)
+        logger("Total characters: " + str(total_chars))
+        logger("Total distinct characters: " + str(distinct_chars))
+        return char_counter
+
+    @staticmethod
     def gen_vocab(data_file, tokenizer=default_tokenizer, old_counter=None, max_count=None):
         """
         generate vocabulary according to train corpus.
         """
-        logger("Creating word_dict from data %s" % data_file)
+        logger("Creating word dict from data {}.".format(data_file))
         word_counter = old_counter if old_counter else Counter()
         counter = 0
         with gfile.FastGFile(data_file) as f:
@@ -179,6 +213,17 @@ class ClozeDataset(object):
 
         return word_counter
 
+    def save_char_vocab(self, char_counter, char_vocab_file, max_vocab_num=None):
+        """
+        Save character vocabulary.
+        We need two special vo
+        """
+        with gfile.FastGFile(char_vocab_file, "w") as f:
+            for char in self._CHAR_START_VOCAB:
+                f.write(char + "\n")
+            for char in list(map(lambda x: x[0], char_counter.most_common(max_vocab_num))):
+                f.write(char + "\n")
+
     def save_vocab(self, word_counter, vocab_file, max_vocab_num=None):
         with gfile.FastGFile(vocab_file, "w") as f:
             for word in self._START_VOCAB:
@@ -188,6 +233,9 @@ class ClozeDataset(object):
 
     @staticmethod
     def load_vocab(vocab_file):
+        """
+        load word(or char) vocabulary file to word/char dict
+        """
         if not gfile.Exists(vocab_file):
             raise ValueError("Vocabulary file %s not found.", vocab_file)
         word_dict = {}
@@ -204,16 +252,9 @@ class ClozeDataset(object):
         if self.args.test:
             self.test_data = self.preprocess_input_sequences(self.test_data)
 
-    # noinspection PyUnresolvedReferences
+    @abc.abstractmethod
     def preprocess_input_sequences(self, data):
         """
-        preprocess,pad to fixed length.
+        Preprocess train/valid/test data. Should be specified by sub class.
         """
-        documents, questions, answer, candidates = data
-
-        questions_ok = pad_sequences(questions, maxlen=self.q_len, dtype="int32", padding="post", truncating="post")
-        documents_ok = pad_sequences(documents, maxlen=self.d_len, dtype="int32", padding="post", truncating="post")
-        candidates_ok = pad_sequences(candidates, maxlen=self.A_len, dtype="int32", padding="post", truncating="post")
-        y_true = np.zeros_like(candidates_ok)
-        y_true[:, 0] = 1
-        return questions_ok, documents_ok, candidates_ok, y_true
+        pass
