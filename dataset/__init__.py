@@ -1,7 +1,7 @@
 from .cbt import CBT
 from .squad import SQuAD
 
-cbt = CBT
-squad = SQuAD
+CBT_NE = CBT
+CBT_CN = CBT
 
-__all__ = ["CBT", "SQuAD", "cbt", "squad"]
+__all__ = ["CBT_NE", "CBT_CN", "SQuAD"]

@@ -1,12 +1,12 @@
 import argparse
-import json
 import logging
-import os
 import sys
-from pprint import pprint
 
 import numpy as np
 import tensorflow as tf
+
+from dataset.data_file_pairs import dataset_files_pairs
+from utils.log import setup_from_args_file, save_args, err
 
 
 class NLPBase(object):
@@ -29,23 +29,12 @@ class NLPBase(object):
         tf.set_random_seed(self.args.random_seed)
 
         # save arguments
-        self.save_args()
-
-    def save_args(self):
-        """
-        save all arguments.
-        """
-        self.save_obj_to_json(vars(self.args), "args.json")
-        pprint(vars(self.args), indent=4)
-
-    def save_obj_to_json(self, obj, filename):
-        if not os.path.exists(self.args.weight_path):
-            os.mkdir(self.args.weight_path)
-        file = os.path.join(self.args.weight_path, filename)
-        with open(file, "w", encoding="utf-8") as fp:
-            json.dump(obj, fp, sort_keys=True, indent=4)
+        save_args(args=self.args)
 
     def add_args(self, parser):
+        """
+        If some model need more arguments, override this method.
+        """
         pass
 
     def get_args(self):
@@ -158,12 +147,11 @@ class NLPBase(object):
 
         parser.add_argument("--patience", default=5, type=int, help="early stopping patience")
         # -----------------------------------------------------------------------------------------------------------
-
         self.add_args(parser)
 
         args = parser.parse_args()
 
-        self.setup_from_args_file(args.args_file)
+        setup_from_args_file(args.args_file)
 
         args = parser.parse_args()
 
@@ -172,15 +160,18 @@ class NLPBase(object):
         args.evaluate_every_n = 5 if args.debug else args.evaluate_every_n
         args.num_epoches = 2 if args.debug else args.num_epoches
 
+        args = self.tune_args(args)
+
         return args
 
     @staticmethod
-    def setup_from_args_file(file):
-        if not file:
-            return
-        json_dict = json.load(open(file, encoding="utf-8"))
-        args = [sys.argv[0]]
-        for k, v in json_dict.items():
-            args.append("--{}".format(k))
-            args.append(str(v))
-        sys.argv = args.copy() + sys.argv[1:]
+    def tune_args(args):
+        """
+        tune the dataset specific args so train_file or test_file need not be changed
+        """
+        try:
+            files = dataset_files_pairs.get(args.dataset)
+            args.data_root, args.train_file, args.valid_file, args.test_file = files
+            return args
+        except AssertionError:
+            err("Error. Cannot find the specific key -> {} in dataset_files_pairs.".format(args.dataset))

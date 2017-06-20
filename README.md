@@ -26,6 +26,8 @@ Datasets:
 git clone https://github.com/zhanghaoyu1993/RC-experiments.git
 ```
 
+
+
 #### 2.Get needed data
 
 - Download and extract the dataset used in this repo.
@@ -34,6 +36,8 @@ git clone https://github.com/zhanghaoyu1993/RC-experiments.git
 cd data
 ./prepare-all.sh
 ```
+
+
 
 #### 3.Environment Preparation
 
@@ -56,7 +60,69 @@ pip install tensorflow-gpu --upgrade
 python -m nltk.downloader punkt
 ```
 
-#### 4.Train the model
+
+
+#### 4.Set model, dataset and other command parameters
+
+- What is the entrance of the program?
+
+The main.py file in root directory.
+
+- How can I specify a model in command line?
+
+Type a command like above, the *model_class* is the class name of model, usually named in cambak-style:
+
+```shell
+python main.py [model_class]
+```
+
+For example, if you want to use AttentionSumReader:
+
+```shell
+python main.py AttentionSumReader
+```
+
+- How can I specify the dataset?
+
+Type a command like above, the *dataset_class* is the class name of dataset:
+
+```shell
+python main.py [model_class] --dataset [dataset_class]
+```
+
+For example, if you want to use CBT:
+
+```shell
+python main.py [model_class] --dataset CBT
+```
+
+You don't need to specify the data_root and train valid test file name in most cases, just specify the dataset.
+
+- How can I know all the parameters?
+
+The program use [argparse](https://docs.python.org/3/library/argparse.html) to deal with parameters, you can type the following command to get help:
+
+```shell
+python main.py --help
+```
+
+or:
+
+```shell
+python main.py -h
+```
+
+- The command parameters is so long!
+
+The parameters will be stored into a file named args.json when executed, so next time you can type the following simplified command:
+
+```shell
+python main.py [model_class] --args_file [args.json]
+```
+
+
+
+#### 5.Train and test the model
 
 First, modify the parameters in the args.json.
 
@@ -66,12 +132,6 @@ You can now train and test the model by entering the following commands. The par
 
 ```shell
 python main.py [model_class] --args_file [args.json] --train 1 --test 0 
-```
-
-For example, if you want to train the AoA-Reader model, the command is similar to the following:
-
-```shell
-python main.py AoAReader --train 1 --test 0
 ```
 
 After train, the parameters are stored in `weight_path/args.json`  and the model checkpoints are stored in `weight_path`.
@@ -84,7 +144,9 @@ python main.py [model_class] --args_file [args.json] --train 0 --test 1
 
 After test, the performance of model are stored in `weight_path/result.json`.
 
-#### 5.model performance
+
+
+#### 6.model performance
 
 All the trained results and corresponding config params are saved in sub directories of weight_path(by default the `weight` folder) named `args.json` and `result.json`.
 
@@ -100,7 +162,9 @@ The best results of implemented models are listed below:
 | AS-Reader  | 69.88(68.6) | 65.0(63.4)  |
 | AoA-Reader | 71.0(72.0)  | 68.12(69.4) |
 
-#### 6.FAQ
+
+
+#### 7.FAQ
 
 - How do I use args_file argument in the shell?
 
