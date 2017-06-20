@@ -6,8 +6,9 @@ import tensorflow as tf
 
 # noinspection PyUnresolvedReferences
 import dataset
+from models import models_in_datasets
 from models.nlp_base import NLPBase
-from utils.log import logger
+from utils.log import logger, save_obj_to_json, err
 
 
 # noinspection PyAttributeOutsideInit
@@ -19,13 +20,9 @@ class RcBase(NLPBase, metaclass=abc.ABCMeta):
     Any deep learning model should inherit from this class and implement the create_model method.
     """
 
-    @property
-    def model_name(self):
-        return self._model_name
-
-    @model_name.setter
-    def model_name(self, value):
-        self._model_name = value
+    def __init__(self):
+        super(RcBase, self).__init__()
+        self.model_name = self.__class__.__name__
 
     @property
     def loss(self):
@@ -75,6 +72,8 @@ class RcBase(NLPBase, metaclass=abc.ABCMeta):
         """
         main method to train and test
         """
+        self.confirm_fitness()
+
         self.dataset = getattr(sys.modules["dataset"], self.args.dataset)(self.args)
 
         # Get the statistics of data
@@ -226,4 +225,18 @@ class RcBase(NLPBase, metaclass=abc.ABCMeta):
             "model": self.model_name,
             "test_acc": test_acc
         }
-        self.save_obj_to_json(res, "result.json")
+        save_obj_to_json(self.args.weight_path, res, "result.json")
+
+    def confirm_fitness(self):
+        # make sure the models_in_datasets var is correct
+        try:
+            assert (models_in_datasets.get(self.args.dataset, None) is not None)
+        except AssertionError:
+            err("Models_in_datasets doesn't have the specified dataset key: {}.".format(self.args.dataset))
+            exit(1)
+        # make sure the model fit the dataset
+        try:
+            assert (self.model_name in models_in_datasets.get(self.args.dataset, None))
+        except AssertionError:
+            err("The model -> {} doesn't support the dataset -> {}".format(self.model_name, self.args.dataset))
+            exit(1)

@@ -1,5 +1,3 @@
-import os
-
 import tensorflow as tf
 from tensorflow.contrib.rnn import GRUCell, MultiRNNCell, LSTMCell
 
@@ -12,10 +10,6 @@ class AoAReader(RcBase):
     Attention-over-Attention reader in "Attention-over-Attention Neural Networks for Reading Comprehension"
     (arXiv2016.7) available at https://arxiv.org/abs/1607.04423.
     """
-
-    def __init__(self):
-        super().__init__()
-        self.model_name = os.path.basename(__file__)
 
     # noinspection PyAttributeOutsideInit
     def create_model(self):

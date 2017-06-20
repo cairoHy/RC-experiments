@@ -1,5 +1,3 @@
-import os
-
 import tensorflow as tf
 from tensorflow.contrib.rnn import LSTMCell, MultiRNNCell, GRUCell
 
@@ -14,10 +12,6 @@ class AttentionSumReader(RcBase):
     Attention Sum Reader model as presented in "Text Comprehension with the Attention Sum Reader Network" 
     (ACL2016) available at http://arxiv.org/abs/1603.01547. 
     """
-
-    def __init__(self):
-        super().__init__()
-        self.model_name = os.path.basename(__file__)
 
     # noinspection PyAttributeOutsideInit
     def create_model(self):
