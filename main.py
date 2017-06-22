@@ -19,6 +19,6 @@ def get_model_class():
 
 
 if __name__ == '__main__':
-    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = "3"
     model = get_model_class()
     model.execute()

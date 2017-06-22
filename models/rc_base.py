@@ -20,10 +20,6 @@ class RcBase(NLPBase, metaclass=abc.ABCMeta):
     Any deep learning model should inherit from this class and implement the create_model method.
     """
 
-    def __init__(self):
-        super(RcBase, self).__init__()
-        self.model_name = self.__class__.__name__
-
     @property
     def loss(self):
         return self._loss
@@ -64,7 +60,7 @@ class RcBase(NLPBase, metaclass=abc.ABCMeta):
     def create_model(self):
         """
         should be override by sub-class and create some operations include [loss, correct_prediction]
-        as class fields.
+        as class attributes.
         """
         return
 
@@ -72,7 +68,7 @@ class RcBase(NLPBase, metaclass=abc.ABCMeta):
         """
         main method to train and test
         """
-        self.confirm_fitness()
+        self.confirm_model_dataset_fitness()
 
         self.dataset = getattr(sys.modules["dataset"], self.args.dataset)(self.args)
 
@@ -89,6 +85,8 @@ class RcBase(NLPBase, metaclass=abc.ABCMeta):
             self.char_embedding_matrix = self.dataset.get_embedding_matrix(self.dataset.char_vocab_file, True)
 
         self.create_model()
+
+        self.make_sure_model_is_valid()
 
         self.saver = tf.train.Saver(max_to_keep=20)
 
@@ -227,16 +225,30 @@ class RcBase(NLPBase, metaclass=abc.ABCMeta):
         }
         save_obj_to_json(self.args.weight_path, res, "result.json")
 
-    def confirm_fitness(self):
+    def confirm_model_dataset_fitness(self):
         # make sure the models_in_datasets var is correct
         try:
             assert (models_in_datasets.get(self.args.dataset, None) is not None)
         except AssertionError:
             err("Models_in_datasets doesn't have the specified dataset key: {}.".format(self.args.dataset))
+            self.sess.close()
             exit(1)
         # make sure the model fit the dataset
         try:
             assert (self.model_name in models_in_datasets.get(self.args.dataset, None))
         except AssertionError:
             err("The model -> {} doesn't support the dataset -> {}".format(self.model_name, self.args.dataset))
+            self.sess.close()
+            exit(1)
+
+    def make_sure_model_is_valid(self):
+        """
+        check if the model has necessary attributes
+        """
+        try:
+            _ = self.loss
+            _ = self.correct_prediction
+        except AttributeError as e:
+            err("Your model {} doesn't have enough attributes.\nError Message:\n\t{}".format(self.model_name, e))
+            self.sess.close()
             exit(1)

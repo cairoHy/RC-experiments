@@ -16,9 +16,11 @@ class NLPBase(object):
     """
 
     def __init__(self):
+        self.model_name = self.__class__.__name__
         self.sess = tf.Session()
         # get arguments
         self.args = self.get_args()
+
         # log set
         logging.basicConfig(filename=self.args.log_file,
                             level=logging.DEBUG,
@@ -64,90 +66,97 @@ class NLPBase(object):
             return int(v)
 
         # TODO:Implement ensemble test
-        parser = argparse.ArgumentParser()
+        parser = argparse.ArgumentParser(description="Reading Comprehension Experiment Code Base.")
         # -----------------------------------------------------------------------------------------------------------
+        group1 = parser.add_argument_group("1.Basic options")
         # basis argument
-        parser.add_argument("--debug", default=False, type=str2bool, help="is debug mode on or off")
+        group1.add_argument("--debug", default=False, type=str2bool, help="is debug mode on or off")
 
-        parser.add_argument("--train", default=True, type=str2bool, help="train or not")
+        group1.add_argument("--train", default=True, type=str2bool, help="train or not")
 
-        parser.add_argument("--test", default=False, type=str2bool, help="test or not")
+        group1.add_argument("--test", default=False, type=str2bool, help="test or not")
 
-        parser.add_argument("--ensemble", default=False, type=str2bool, help="ensemble test or not")
+        group1.add_argument("--ensemble", default=False, type=str2bool, help="ensemble test or not")
 
-        parser.add_argument("--random_seed", default=2088, type=int, help="random seed")
+        group1.add_argument("--random_seed", default=2088, type=int, help="random seed")
 
-        parser.add_argument("--log_file", default=None, type=str_or_none,
+        group1.add_argument("--log_file", default=None, type=str_or_none,
                             help="which file to save the log,if None,use screen")
 
-        parser.add_argument("--weight_path", default="weights", help="path to save all trained models")
+        group1.add_argument("--weight_path", default="weights", help="path to save all trained models")
 
-        parser.add_argument("--args_file", default=None, type=str_or_none, help="json file of current args")
+        group1.add_argument("--args_file", default=None, type=str_or_none, help="json file of current args")
+
+        group1.add_argument("--print_every_n", default=10, type=int, help="print performance every n steps")
 
         # data specific argument
+        group2 = parser.add_argument_group("2.Data specific options")
         # noinspection PyUnresolvedReferences
         import dataset
-        parser.add_argument("--dataset", default="CBT", choices=sys.modules['dataset'].__all__, type=str,
+        group2.add_argument("--dataset", default="CBT", choices=sys.modules['dataset'].__all__, type=str,
                             help='type of the dataset to load')
 
-        parser.add_argument("--data_root", default="data/CBTest/CBTest/data/",
-                            help="root path of the dataset")
-
-        parser.add_argument("--tmp_dir", default="tmp", help="dataset specific tmp folder")
-
-        parser.add_argument("--train_file", default="cbtest_NE_train.txt", help="train file")
-
-        parser.add_argument("--valid_file", default="cbtest_NE_valid_2000ex.txt", help="validation file")
-
-        parser.add_argument("--test_file", default="cbtest_NE_test_2500ex.txt", help="test file")
-
-        parser.add_argument("--embedding_file", default="data/glove.6B/glove.6B.200d.txt",
+        group2.add_argument("--embedding_file", default="data/glove.6B/glove.6B.200d.txt",
                             type=str_or_none, help="pre-trained embedding file")
 
-        parser.add_argument("--max_count", default=None, type=int_or_none,
-                            help="read n lines of data file, if None, read all data")
+        group2.add_argument("--max_vocab_num", default=100000, type=int, help="the max number of words in vocabulary")
 
-        parser.add_argument("--max_vocab_num", default=100000, type=int, help="the max number of words in vocabulary")
+        subgroup = group2.add_argument_group("Some default options related to dataset, don't change if it works")
+
+        subgroup.add_argument("--data_root", default="data/CBTest/CBTest/data/",
+                              help="root path of the dataset")
+
+        subgroup.add_argument("--tmp_dir", default="tmp", help="dataset specific tmp folder")
+
+        subgroup.add_argument("--train_file", default="cbtest_NE_train.txt", help="train file")
+
+        subgroup.add_argument("--valid_file", default="cbtest_NE_valid_2000ex.txt", help="validation file")
+
+        subgroup.add_argument("--test_file", default="cbtest_NE_test_2500ex.txt", help="test file")
+
+        subgroup.add_argument("--max_count", default=None, type=int_or_none,
+                              help="read n lines of data file, if None, read all data")
 
         # hyper-parameters
-        parser.add_argument("--use_char_embedding", default=False, type=str2bool,
+        group3 = parser.add_argument_group("3.Hyper parameters shared by all models")
+
+        group3.add_argument("--use_char_embedding", default=False, type=str2bool,
                             help="use character embedding or not")
 
-        parser.add_argument("--char_embedding_dim", default=100, type=int, help="dimension of char embeddings")
+        group3.add_argument("--char_embedding_dim", default=100, type=int, help="dimension of char embeddings")
 
-        parser.add_argument("--embedding_dim", default=200, type=int, help="dimension of word embeddings")
+        group3.add_argument("--embedding_dim", default=200, type=int, help="dimension of word embeddings")
 
-        parser.add_argument("--hidden_size", default=128, type=int, help="RNN hidden size")
+        group3.add_argument("--hidden_size", default=128, type=int, help="RNN hidden size")
 
-        parser.add_argument("--grad_clipping", default=10, type=int, help="the threshold value of gradient clip")
+        group3.add_argument("--grad_clipping", default=10, type=int, help="the threshold value of gradient clip")
 
-        parser.add_argument("--lr", default=0.001, type=float, help="learning rate")
+        group3.add_argument("--lr", default=0.001, type=float, help="learning rate")
 
-        parser.add_argument("--keep_prob", default=0.9, type=float, help="dropout,percentage to keep during training")
+        group3.add_argument("--keep_prob", default=0.9, type=float, help="dropout,percentage to keep during training")
 
-        parser.add_argument("--l2", default=0.0001, type=float, help="l2 regularization weight")
+        group3.add_argument("--l2", default=0.0001, type=float, help="l2 regularization weight")
 
-        parser.add_argument("--num_layers", default=1, type=int, help="RNN layer number")
+        group3.add_argument("--num_layers", default=1, type=int, help="RNN layer number")
 
-        parser.add_argument("--use_lstm", default=False, type=str2bool,
+        group3.add_argument("--use_lstm", default=False, type=str2bool,
                             help="RNN kind, if False, use GRU else LSTM")
 
-        # train specific
-        parser.add_argument("--batch_size", default=32, type=int, help="batch_size")
+        group3.add_argument("--batch_size", default=32, type=int, help="batch_size")
 
-        parser.add_argument("--optimizer", default="ADAM", choices=["SGD", "ADAM"],
+        group3.add_argument("--optimizer", default="ADAM", choices=["SGD", "ADAM"],
                             help="optimize algorithms, SGD or Adam")
 
-        parser.add_argument("--print_every_n", default=10, type=int, help="print performance every n steps")
-
-        parser.add_argument("--evaluate_every_n", default=400, type=int,
+        group3.add_argument("--evaluate_every_n", default=400, type=int,
                             help="evaluate performance on validation set and possibly saving the best model")
 
-        parser.add_argument("--num_epoches", default=10, type=int, help="max epoch iterations")
+        group3.add_argument("--num_epoches", default=10, type=int, help="max epoch iterations")
 
-        parser.add_argument("--patience", default=5, type=int, help="early stopping patience")
+        group3.add_argument("--patience", default=5, type=int, help="early stopping patience")
         # -----------------------------------------------------------------------------------------------------------
-        self.add_args(parser)
+        group4 = parser.add_argument_group("4.model [{}] specific parameters".format(self.model_name))
+
+        self.add_args(group4)
 
         args = parser.parse_args()
 
@@ -156,7 +165,7 @@ class NLPBase(object):
         args = parser.parse_args()
 
         # set debug params
-        args.max_count = 22 * 32 * 10 + 22 * 16 if args.debug else args.max_count
+        args.max_count = 7392 if args.debug else args.max_count
         args.evaluate_every_n = 5 if args.debug else args.evaluate_every_n
         args.num_epoches = 2 if args.debug else args.num_epoches
 

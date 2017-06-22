@@ -41,7 +41,7 @@ class RCDataset(object, metaclass=abc.ABCMeta):
         self._CHAR_UNK = "δ"
         self.CHAR_PAD_ID = 0
         self.CHAR_UNK_ID = 1
-        self._CHAR_START_VOCAB = [self._CHAR_PAD,self._CHAR_UNK]
+        self._CHAR_START_VOCAB = [self._CHAR_PAD, self._CHAR_UNK]
 
     @property
     def train_idx(self):
@@ -101,13 +101,7 @@ class RCDataset(object, metaclass=abc.ABCMeta):
             stop = (idx + 1) * batch_size if start < sample_num and (idx + 1) * batch_size < sample_num else -1
         samples = batch_size if stop != -1 else len(dataset[0]) - start
         _slice = np.index_exp[start:stop]
-        data = {
-            "questions_bt:0": dataset[0][_slice],
-            "documents_bt:0": dataset[1][_slice],
-            "candidates_bi:0": dataset[2][_slice],
-            "y_true_bi:0": dataset[3][_slice]
-        }
-        return data, samples
+        return self.next_batch_feed_dict_by_dataset(dataset, _slice, samples)
 
     @staticmethod
     def gen_embeddings(word_dict, embed_dim, in_file=None, init=np.zeros):
@@ -256,5 +250,19 @@ class RCDataset(object, metaclass=abc.ABCMeta):
     def preprocess_input_sequences(self, data):
         """
         Preprocess train/valid/test data. Should be specified by sub class.
+        """
+        pass
+
+    @abc.abstractmethod
+    def get_data_stream(self):
+        """
+        Get data statistics.
+        """
+        pass
+
+    @abc.abstractmethod
+    def next_batch_feed_dict_by_dataset(self, dataset, _slice, samples):
+        """
+        How to specify feed dict according to _slice.
         """
         pass

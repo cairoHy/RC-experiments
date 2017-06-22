@@ -61,8 +61,8 @@ class TestSQuAD(TestDataset):
                                                                                               valid_file, max_vocab_num,
                                                                                               output_dir)
 
-        documents, questions, answer_spans = self.dataset.read_squad_data(os_train_file)
-        v_documents, v_questions, v_answer_spans = self.dataset.read_squad_data(os_valid_file)
+        documents, questions, _ = self.dataset.read_squad_data(os_train_file)
+        v_documents, v_questions, _ = self.dataset.read_squad_data(os_valid_file)
         data = self.dataset.squad_data_to_idx(vocab_file, documents, questions,
                                               v_documents, v_questions)
         # make sure that each one of (d,q,v_d,v_q) is a list, and each element is a list too.

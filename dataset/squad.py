@@ -10,11 +10,29 @@ from utils.log import logger
 
 
 class SQuAD(RCDataset):
+    def __init__(self, args):
+        super(SQuAD, self).__init__(args)
+        self.w_len = 10
+
+    def next_batch_feed_dict_by_dataset(self, dataset, _slice, samples):
+        data = {
+            "documents_bt:0": dataset[0][_slice],
+            "questions_bt:0": dataset[1][_slice],
+            # TODO: substitute with real data
+            "documents_btk:0": np.zeros([samples, self.d_len, self.w_len]),
+            "questions_btk:0": np.zeros([samples, self.q_len, self.w_len]),
+            "answer_start:0": dataset[2][_slice],
+            "answer_end:0": dataset[3][_slice]
+        }
+        return data, samples
+
     def preprocess_input_sequences(self, data):
         documents, questions, answer_spans = data
         documents_ok = pad_sequences(documents, maxlen=self.d_len, dtype="int32", padding="post", truncating="post")
         questions_ok = pad_sequences(questions, maxlen=self.q_len, dtype="int32", padding="post", truncating="post")
-        return documents_ok, questions_ok, answer_spans
+        answer_start = [np.array([int(i == answer_span[0]) for i in range(self.d_len)]) for answer_span in answer_spans]
+        answer_end = [np.array([int(i == answer_span[1]) for i in range(self.d_len)]) for answer_span in answer_spans]
+        return documents_ok, questions_ok, np.asarray(answer_start), np.asarray(answer_end)
 
     def prepare_data(self, data_dir, train_file, valid_file, max_vocab_num, output_dir=""):
         """
@@ -30,13 +48,16 @@ class SQuAD(RCDataset):
         vocab_data_file = os.path.join(data_dir, output_dir, "data.txt")
 
         def save_data(d_data, q_data):
+            """
+            save all data to a file and use it build vocabulary.
+            """
             with open(vocab_data_file, mode="w", encoding="utf-8") as f:
                 f.write("\t".join(d_data) + "\n")
                 f.write("\t".join(q_data) + "\n")
 
         if not gfile.Exists(vocab_data_file):
-            d, q, a = self.read_squad_data(os_train_file)
-            v_d, v_q, v_a = self.read_squad_data(os_valid_file)
+            d, q, _ = self.read_squad_data(os_train_file)
+            v_d, v_q, _ = self.read_squad_data(os_valid_file)
             save_data(d, q)
             save_data(v_d, v_q)
         if not gfile.Exists(vocab_file):
@@ -53,6 +74,7 @@ class SQuAD(RCDataset):
     def read_squad_data(self, file):
         """
         read squad data file in string form
+        :return tuple of (documents, questions, answer_spans)
         """
         logger("Reading SQuAD data.")
 
@@ -75,6 +97,7 @@ class SQuAD(RCDataset):
         [extract(sample) for data in data_list for sample in data["paragraphs"]]
         if self.args.debug:
             documents, questions, answer_spans = documents[:500], questions[:500], answer_spans[:500]
+
         return documents, questions, answer_spans
 
     def squad_data_to_idx(self, vocab_file, *args):
@@ -120,7 +143,6 @@ class SQuAD(RCDataset):
         # data statistics
         self.d_len = get_max_length(self.train_data[0])
         self.q_len = get_max_length(self.train_data[1])
-        self.w_len = 10
         self.train_sample_num = len(self.train_data[0])
         self.valid_sample_num = len(self.valid_data[0])
         self.test_sample_num = len(self.test_data[0])

@@ -15,6 +15,15 @@ class CBT(RCDataset):
         self.A_len = 10
         super().__init__(args)
 
+    def next_batch_feed_dict_by_dataset(self, dataset, _slice, samples):
+        data = {
+            "questions_bt:0": dataset[0][_slice],
+            "documents_bt:0": dataset[1][_slice],
+            "candidates_bi:0": dataset[2][_slice],
+            "y_true_bi:0": dataset[3][_slice]
+        }
+        return data, samples
+
     def cbt_data_to_token_ids(self, data_file, target_file, vocab_file, max_count=None):
         """
         22 lines for one sample.
